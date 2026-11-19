@@ -113,6 +113,11 @@
   font-size: 1.15rem;
 }
 
+.value[data-size="xxs"] {
+  font-size: 0.95rem;
+  letter-spacing: 0;
+}
+
 .value[data-size="error"] {
   color: var(--color-danger);
   font-size: 1.5rem;

@@ -160,7 +160,7 @@ export function useCalculatorSession(mode: CalcMode): CalculatorSession {
         }
         return;
       }
-      const command = commandForKeyboard(event);
+      const command = commandForKeyboard(event, mode);
       if (!command) {
         return;
       }
@@ -170,7 +170,7 @@ export function useCalculatorSession(mode: CalcMode): CalculatorSession {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [overlay, send, copyValue, handlePaste, view.value]);
+  }, [mode, overlay, send, copyValue, handlePaste, view.value]);
 
   return {
     view,

@@ -1,5 +1,21 @@
 {
   "title": "Programmer",
   "wordSize": "Word size",
-  "radix": "Radix"
+  "radix": "Radix",
+  "keypad": "Programmer keypad",
+  "bits": "Bit grid",
+  "bit": "Bit {{index}}",
+  "radixRow": "{{radix}} radix",
+  "truncated": "High bits were truncated to {{bits}} bits",
+  "keys": {
+    "and": "Bitwise AND",
+    "or": "Bitwise OR",
+    "xor": "Bitwise XOR",
+    "not": "Bitwise NOT",
+    "leftShift": "Left shift",
+    "rightShift": "Right shift",
+    "rotateLeft": "Rotate left",
+    "rotateRight": "Rotate right",
+    "modulo": "Modulo"
+  }
 }

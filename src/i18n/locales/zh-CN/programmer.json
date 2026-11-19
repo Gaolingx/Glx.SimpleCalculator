@@ -1,5 +1,21 @@
 {
   "title": "程序员",
   "wordSize": "字宽",
-  "radix": "进制"
+  "radix": "进制",
+  "keypad": "程序员键盘",
+  "bits": "位网格",
+  "bit": "第 {{index}} 位",
+  "radixRow": "{{radix}} 进制",
+  "truncated": "高位已截断到 {{bits}} 位",
+  "keys": {
+    "and": "按位与",
+    "or": "按位或",
+    "xor": "按位异或",
+    "not": "按位取反",
+    "leftShift": "左移",
+    "rightShift": "右移",
+    "rotateLeft": "循环左移",
+    "rotateRight": "循环右移",
+    "modulo": "取模"
+  }
 }

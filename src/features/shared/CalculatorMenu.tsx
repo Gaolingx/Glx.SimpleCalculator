@@ -13,9 +13,11 @@ interface CalculatorMenuProps {
   onCopyValue: (text: string) => void;
   onPaste: () => void;
   onClear: () => void;
+  /** Mode-specific "copy displayed value" formatting. */
+  formatDisplay?: (value: string) => string;
 }
 
-/** Shared context menu for standard and scientific calculators (T7). */
+/** Shared context menu for the calculator pages (T7). */
 export function CalculatorMenu({
   menu,
   onClose,
@@ -25,8 +27,12 @@ export function CalculatorMenu({
   onCopyValue,
   onPaste,
   onClear,
+  formatDisplay,
 }: CalculatorMenuProps) {
   const { t } = useTranslation();
+  const displayText = formatDisplay
+    ? formatDisplay(value)
+    : formatNumber(value, { grouping });
 
   const items: SoftMenuItem[] = [
     {
@@ -40,7 +46,7 @@ export function CalculatorMenu({
       id: "copy-display",
       label: t("basic:contextMenu.copyDisplay"),
       disabled: !value,
-      onSelect: () => onCopyValue(formatNumber(value, { grouping })),
+      onSelect: () => onCopyValue(displayText),
     },
     {
       id: "paste",

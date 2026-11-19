@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T9 完成**（2026-11-19）：程序员内核（i64/字宽/位运算/补码视图）；下一步 T10 |
+| 当前进度 | **T10 完成**（2026-11-19）：程序员 UI（四进制同步 / 位网格 / 进制与字宽切换）；下一步 T11 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -200,6 +200,18 @@ setx PATH "%PATH%;E:\node"
 - 测试：Rust 160 项（calc-core 143 = lib 112 + 契约 5 + 黄金 1 + 程序员集成 16 + 科学集成 9；shell 17）；前端 105 项不变。属性覆盖：BYTE 全量 256² 真值表、BYTE 256 × 移位次数 10 的 `ROL/ROR` 互逆、固定种子 64 位旋转互逆、`NOT(NOT(x)) = x`。
 - 门禁：`cargo fmt --check` / `clippy -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物不变：JS 350.77 kB（gzip 109.59 kB）、CSS 31.74 kB（gzip 6.04 kB）。
 - 验收：`0xFF AND 0x0F = 0x0F`、`NOT 0`（BYTE）= `0xFF`（主显示 `-1`）、`ROL(0x8000_0000_0000_0001, 1) = 0x3` 均由集成测试覆盖；`18446744073709551615` 在 QWORD 下与 `0xFFFF_FFFF_FFFF_FFFF` 互显为 `-1`。本任务无 UI 变更，实机界面验收随 T10。
+
+**T10 实测记录（2026-11-19）**
+
+- 页面结构：`ProgrammerPage` 由显示区、记忆行、字宽分段控件、四进制行（HEX/DEC/OCT/BIN，点击切换并持久化）、位网格、6 列键盘组成；`Display` 新增 `valueText`/`expressionText` 覆盖参数，程序员投影不经过 `formatNumber`。
+- 格式化：新增 `lib/programmer.ts`。十进制按 3 位逗号分组，二进制/十六进制按 4 位、八进制按 3 位空格分组；表达式行只对当前进制的完整数字 token 分组，并把 `* / - << >>` 映射为 `× ÷ − LSH RSH`，`NOT(x)` 保留括号；`grouping` 设置对所有进制生效；复制仍使用未分组原始值（右键“复制显示值”用分组投影）。
+- 位网格：按字宽渲染 8/16/32/64 个 `button`，MSB 在左，`aria-pressed` 反映状态，`aria-label` 为“第 N 位”；点击发送 `ToggleBit`。16 位一行，QWORD 为 4 行。
+- 非法输入：A–F 与 0–9 键按当前进制禁用（BIN 禁用 2–9 与 A–F，OCT 禁用 8/9/A–F，DEC 禁用 A–F）；内核仍做二次拦截。键盘映射改为模式感知：程序员模式接受 0–9/A–F 与四则/Enter/Esc/Backspace/F9，不再把 R/Q/@/% 映射为科学函数。
+- 进制/字宽：挂载与设置变更时下发 `SetRadix`/`SetWordSize`；页面内切换写回设置（`settings.radix`/`wordSize`）。缩窄字宽时若旧 `bits` 的高位含 1，显示“高位已截断到 N 位”提示。
+- 测试：前端 125 项（新增 `lib/programmer` 10、`ProgrammerPage` 10）；Rust 160 项不变。覆盖四进制同步、进制切换持久化、按进制禁用数字键、64 位网格单元数、截断提示、A–F 键盘输入与上下文菜单分组复制。
+- 门禁：`cargo fmt --check` / `clippy -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 358.60 kB（gzip 111.93 kB）、CSS 34.83 kB（gzip 6.42 kB），仍在 250 kB gzip 预算内。
+- QA（Edge headless CDP，440×820）：BYTE/QWORD 页面均无横向或纵向溢出；`HEX/DEC/OCT/BIN` 四行同步（`FF / -1 / 377 / 1111 1111`），点击 BIN 后 2 与 A 键禁用、点击首位后 `FF → 7F`；light/dark × zh-CN/en-US 四组截图正常。截图流程通过 `Page.addScriptToEvaluateOnNewDocument` 注入 mock `__TAURI_INTERNALS__` 以渲染真实前端；真实 Rust IPC 未在本轮点击验证，内核行为由 T9 集成测试覆盖。
+- 截图：`docs/qa/2026-11-19/t10-{light,dark}-{zh-CN,en-US}-programmer.png` + `t10-light-zh-CN-programmer-qword.png`。
 
 
 ### 1.4 参考截图 → 布局结论
@@ -708,7 +720,7 @@ src/i18n/locales/en-US/...（同构）
 | T7 | 剪贴板 + 校验 + 右键菜单 | M2 | T5 | `lib/clipboard.ts`、粘贴清洗、`SoftMenu`、错误提示 | 非法粘贴；0x/0b；Ctrl+C/V | done |
 | T8 | 科学型 | M3 | T4 | `ops::scientific`、科学键盘、角度制、F-E、定义域错误 | sin/cos/ln/阶乘/幂单测；RAD/DEG | done |
 | T9 | 程序员核心 | M4 | T4 | 进制/字宽/位运算/旋转/补码、真值表与属性测试 | 掩码、环绕、BYTE/QWORD 边界 | done |
-| T10 | 程序员 UI | M4 | T9 | 进制/字宽切换、四进制显示、位网格、无效输入拦截 | 点击翻转位；切换进制同步 | pending |
+| T10 | 程序员 UI | M4 | T9 | 进制/字宽切换、四进制显示、位网格、无效输入拦截 | 点击翻转位；切换进制同步 | done |
 | T11 | 统计型 | M5 | T4 | 数据集面板、统计函数、空集/单元素边界 | 与 Excel 样本一致 | pending |
 | T12 | 单位注册表 + 转换页 | M6 | T3 | 11 类单位数据、`convert_unit`、双下拉/换向 UI | 每类 3 组黄金值；温度往返 | pending |
 | T13 | 汇率 | M6 | T12 | ECB 拉取/解析/缓存/TTL/离线 UI/手动刷新 | 断网缓存；5s 限速；交叉汇率 | pending |
@@ -808,8 +820,8 @@ npm run typecheck && npm run test
 - [x] 字宽掩码 + 截断规则；负数补码显示
 - [x] 位运算：`AND OR XOR NOT LSH RSH ROL ROR MOD`（环绕移位在字宽内进行）
 - [x] 十进制整数算术 + 除法截断 + 溢出环绕（`wrapping_*`）
-- [ ] 位网格：64/32/16/8 单元，可点击翻转、键盘可达（P1，T10）
-- [ ] 进制分组显示（4/3 位，T10）+ 无效数字拦截（内核已完成）
+- [x] 位网格：64/32/16/8 单元，可点击翻转、键盘可达（P1，T10）
+- [x] 进制分组显示（4/3 位，T10）+ 无效数字拦截（内核已完成）
 - [x] 单测：位运算真值表、移位/旋转对称性（`ROL`/`ROR` 互逆）、字宽边界
 
 **验收**

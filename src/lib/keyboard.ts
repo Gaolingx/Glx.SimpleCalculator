@@ -1,4 +1,4 @@
-import type { CalcCommand } from "./ipc";
+import type { CalcCommand, CalcMode } from "./ipc";
 
 export interface KeyInput {
   key: string;
@@ -14,12 +14,19 @@ export interface KeyInput {
  * Returns `null` for anything the page should not intercept, so browser and
  * assistive-technology shortcuts keep working.
  */
-export function commandForKeyboard(input: KeyInput): CalcCommand | null {
+export function commandForKeyboard(
+  input: KeyInput,
+  mode: CalcMode = "basic",
+): CalcCommand | null {
   if (input.ctrlKey || input.altKey || input.metaKey) {
     return null;
   }
 
   const { key } = input;
+
+  if (mode === "programmer") {
+    return programmerCommand(key);
+  }
 
   if (key.length === 1 && key >= "0" && key <= "9") {
     return { type: "digit", digit: key.charCodeAt(0) - 48 };
@@ -58,6 +65,42 @@ export function commandForKeyboard(input: KeyInput): CalcCommand | null {
       return { type: "unary", op: "square" };
     case "@":
       return { type: "unary", op: "sqrt" };
+    default:
+      return null;
+  }
+}
+
+/** Programmer sessions take hex digits and skip decimal-only keys. */
+function programmerCommand(key: string): CalcCommand | null {
+  if (key.length === 1) {
+    if (key >= "0" && key <= "9") {
+      return { type: "digit", digit: key.charCodeAt(0) - 48 };
+    }
+    const lower = key.toLowerCase();
+    if (lower >= "a" && lower <= "f") {
+      return { type: "digit", digit: lower.charCodeAt(0) - 87 };
+    }
+  }
+
+  switch (key) {
+    case "+":
+      return { type: "binary", op: "add" };
+    case "-":
+      return { type: "binary", op: "subtract" };
+    case "*":
+      return { type: "binary", op: "multiply" };
+    case "/":
+      return { type: "binary", op: "divide" };
+    case "Enter":
+    case "=":
+      return { type: "equals" };
+    case "Escape":
+    case "Delete":
+      return { type: "clearAll" };
+    case "Backspace":
+      return { type: "backspace" };
+    case "F9":
+      return { type: "toggleSign" };
     default:
       return null;
   }

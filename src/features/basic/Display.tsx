@@ -16,6 +16,10 @@ export interface DisplayProps {
   onCopy: () => void;
   /** Scientific-mode F-E toggle. */
   notation?: "auto" | "scientific";
+  /** Pre-formatted value (programmer radix projection); bypasses `formatNumber`. */
+  valueText?: string;
+  /** Pre-formatted expression line (radix-aware grouping). */
+  expressionText?: string;
 }
 
 const SIZE_STEPS: ReadonlyArray<readonly [number, string]> = [
@@ -23,6 +27,8 @@ const SIZE_STEPS: ReadonlyArray<readonly [number, string]> = [
   [12, "lg"],
   [16, "md"],
   [22, "sm"],
+  [32, "xs"],
+  [48, "xxs"],
 ];
 
 function sizeFor(text: string): string {
@@ -31,7 +37,7 @@ function sizeFor(text: string): string {
       return size;
     }
   }
-  return "xs";
+  return "xxs";
 }
 
 export function Display({
@@ -42,12 +48,15 @@ export function Display({
   memory,
   onCopy,
   notation = "auto",
+  valueText,
+  expressionText,
 }: DisplayProps) {
   const { t } = useTranslation();
-  const displayValue = value ? formatNumber(value, { grouping, notation }) : "0";
+  const displayValue =
+    valueText ?? (value ? formatNumber(value, { grouping, notation }) : "0");
   const errorText = error ? t(`errors:${error}`) : "";
   const mainText = errorText || displayValue;
-  const formattedExpression = formatExpression(expression, grouping);
+  const formattedExpression = expressionText ?? formatExpression(expression, grouping);
 
   const expressionRef = useRef<HTMLDivElement>(null);
   const valueRef = useRef<HTMLDivElement>(null);
