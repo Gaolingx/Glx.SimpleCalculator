@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n, { initI18n } from "../../i18n";
@@ -143,6 +143,17 @@ describe("HistoryDrawer", () => {
 
     await waitFor(() => expect(backend.deleteHistory).toHaveBeenCalledWith("a"));
     await waitFor(() => expect(screen.getByText(i18n.t("history:empty"))).toBeTruthy());
+  });
+
+  it("keeps the drawer mounted while the close animation plays", async () => {
+    renderDrawer();
+
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+
+    act(() => useUiStore.setState({ overlay: null }));
+
+    expect(screen.queryByRole("dialog")).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("asks for confirmation before clearing everything", async () => {

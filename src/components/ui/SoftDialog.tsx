@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -21,6 +21,10 @@ export interface SoftDialogProps {
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+// Kept in sync with --duration-base so the panel finishes its exit animation
+// before it is unmounted.
+const EXIT_DURATION_MS = 300;
+
 export function SoftDialog({
   open,
   onClose,
@@ -36,6 +40,20 @@ export function SoftDialog({
   const id = useId();
   const titleId = `${id}-title`;
   const descriptionId = `${id}-description`;
+  const [rendered, setRendered] = useState(open);
+  const closing = rendered && !open;
+
+  if (open && !rendered) {
+    setRendered(true);
+  }
+
+  useEffect(() => {
+    if (!closing) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setRendered(false), EXIT_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [closing]);
 
   useEffect(() => {
     if (!open) {
@@ -85,13 +103,13 @@ export function SoftDialog({
     };
   }, [open, onClose]);
 
-  if (!open || typeof document === "undefined") {
+  if (!rendered || typeof document === "undefined") {
     return null;
   }
 
   return createPortal(
     <div
-      className={cx(styles.backdrop, styles[variant])}
+      className={cx(styles.backdrop, styles[variant], closing && styles.closing)}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();

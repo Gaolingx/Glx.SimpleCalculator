@@ -40,6 +40,19 @@
   animation: slide-in var(--duration-base) var(--ease-soft);
 }
 
+.closing {
+  pointer-events: none;
+  animation: fade-out var(--duration-base) var(--ease-soft) forwards;
+}
+
+.closing .panel {
+  animation: pop-out var(--duration-base) var(--ease-soft) forwards;
+}
+
+.sheet.closing .panel {
+  animation: slide-out var(--duration-base) var(--ease-soft) forwards;
+}
+
 .header {
   display: flex;
   align-items: flex-start;
@@ -129,5 +142,34 @@
   }
   to {
     transform: translateX(0);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.98);
+  }
+}
+
+@keyframes slide-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
   }
 }
