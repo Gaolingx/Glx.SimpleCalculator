@@ -9,6 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
+| 当前进度 | **T0 完成**（2026-11-19）：workspace + `calc-core` 契约骨架 + 7 项测试通过；下一步 T1 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -260,15 +261,15 @@ Glx.SimpleCalculator/
 ### 3.6 IPC 契约（示例，实施时以此为准）
 
 ```rust
-// crates/calc-core/src/view.rs
+// crates/calc-core/src/view.rs（T0 已冻结）
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CalcView {
+    pub mode: Mode,
     pub expression: String,      // 供展示的表达式行（ASCII 运算符）
     pub value: String,           // 规范化原始值，未分组
-    pub mode: Mode,
     pub memory: Option<String>,
-    pub radix: Option<RadixView>,        // 程序员：四种进制字符串 + 位串
+    pub programmer: Option<ProgrammerView>, // radix/wordSize/四种进制/bits
     pub error: Option<ErrorInfo>,
 }
 
@@ -281,6 +282,7 @@ pub struct ErrorInfo { pub code: ErrorCode, pub args: Vec<String> }
 pub enum ErrorCode {
     DivideByZero, Overflow, InvalidInput, DomainError,
     Syntax, Unsupported, CurrencyOffline, UnknownUnit,
+    StorageError, NetworkError, Internal,
 }
 ```
 
@@ -303,6 +305,8 @@ pub enum CalcCommand {
 ```
 
 其余命令：`session_reset(mode)`、`convert_unit`、`currency_status/refresh`、`date_diff/date_add`、`worksheet_compute`、`stats_compute`、`history_list/add/delete/clear`、`settings_get/set/reset`、`app_info`。
+
+契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
 TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`；枚举用字符串字面量联合。
 
@@ -576,7 +580,7 @@ src/i18n/locales/en-US/...（同构）
 
 | ID | 任务 | 里程碑 | 依赖 | 交付物 | 验证 | 状态 |
 |---|---|---|---|---|---|---|
-| T0 | 环境与模块边界冻结 | M0 | — | PATH 约定、根 `Cargo.toml` workspace、`crates/calc-core` 契约骨架（`error/view/mode/command`）、`.gitignore`、本文档 3.10/3.11 | `cargo test -p calc-core`；`cargo check --workspace` | pending |
+| T0 | 环境与模块边界冻结 | M0 | — | PATH 约定、根 `Cargo.toml` workspace、`crates/calc-core` 契约骨架（`error/view/mode/command`）、`.gitignore`、本文档 3.10/3.11 | `cargo test -p calc-core`；`cargo check --workspace` | done |
 | T1 | Tauri + React 脚手架 + CI | M0 | T0 | `src-tauri` 配置/插件/权限、Vite/TS/ESLint、`package-lock.json`、`.github/workflows/ci.yml` | `npm install`；`npm run tauri dev`；CI 绿 | pending |
 | T2 | 设计系统 + i18n + 主题 | M0 | T1 | `tokens.css`（双主题）、字体、`SoftButton/Card/Input/Tooltip/Toast`、i18n 初始化与 zh/en 骨架 | 两主题/两语言截图；`check:i18n` | pending |
 | T3 | 窗口外壳 + 导航 + 设置 | M0 | T2 | `TitleBar`/`CaptionButtons`/`NavRail`/路由（7 页占位）、设置页与 store 读写、Spike A/B | 拖拽/缩放/关闭；重启保留设置；DPI 100/150 | pending |
@@ -608,8 +612,8 @@ src/i18n/locales/en-US/...（同构）
 ### M0 项目骨架与设计系统（2–3 人日）
 
 **任务**
-- [ ] T0：配置 PATH（`export PATH="/e/node:$PATH"` / `setx PATH "%PATH%;E:\node"`），验证 `node -v`、`npm -v`
-- [ ] T0：根 `Cargo.toml` workspace（`src-tauri` + `crates/calc-core`，T1 时加入前者）+ `calc-core` 契约骨架 + `.gitignore`
+- [x] T0：配置 PATH（`export PATH="/e/node:$PATH"` / `setx PATH "%PATH%;E:\node"`），验证 `node -v`、`npm -v`
+- [x] T0：根 `Cargo.toml` workspace（先含 `crates/calc-core`，T1 加入 `src-tauri`）+ 契约骨架 + `.gitignore`
 - [ ] T1：初始化 Tauri 2 + React 19 + TS + Vite；插件与 capabilities 最小权限；CI
 - [ ] T2：`tokens.css`（双主题）+ 基础控件 + 字体本地化 + i18n 骨架
 - [ ] T3：窗口 440×820、最小 380×640、`decorations:false`、`transparent:false`；`TitleBar` + `NavRail` + 路由占位（7 个主页面 + 2 个覆盖层，见 2.0）

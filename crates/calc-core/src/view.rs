@@ -1,0 +1,51 @@
+use serde::{Deserialize, Serialize};
+
+use crate::error::ErrorInfo;
+use crate::mode::{Mode, Radix, WordSize};
+
+/// Canonical state returned to the UI after every command.
+///
+/// All numeric strings are unformatted. Digit grouping, locale separators and
+/// significant-digit display are owned by the frontend (`lib/format.ts`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalcView {
+    pub mode: Mode,
+    /// Expression line, ASCII operators only.
+    pub expression: String,
+    /// Canonical raw value; empty when the session has no value yet.
+    pub value: String,
+    pub memory: Option<String>,
+    /// Present only in programmer mode.
+    pub programmer: Option<ProgrammerView>,
+    pub error: Option<ErrorInfo>,
+}
+
+impl CalcView {
+    pub fn empty(mode: Mode) -> Self {
+        Self {
+            mode,
+            expression: String::new(),
+            value: String::new(),
+            memory: None,
+            programmer: None,
+            error: None,
+        }
+    }
+}
+
+/// Programmer-mode projections of the current value.
+///
+/// Strings contain no separators; the UI groups them (4/4/3/3 digits) according
+/// to the active radix. `bits` is MSB-first with length `word_size.bits()`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProgrammerView {
+    pub radix: Radix,
+    pub word_size: WordSize,
+    pub binary: String,
+    pub octal: String,
+    pub decimal: String,
+    pub hexadecimal: String,
+    pub bits: String,
+}

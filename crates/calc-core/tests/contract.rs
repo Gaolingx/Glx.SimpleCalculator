@@ -1,0 +1,164 @@
+use calc_core::{
+    AngleUnit, BinaryOp, CalcCommand, CalcView, ConstantId, ErrorCode, ErrorInfo, Mode,
+    ProgrammerView, Radix, UnaryOp, WordSize,
+};
+use serde_json::json;
+
+#[test]
+fn commands_serialize_with_camel_case_tags() {
+    assert_eq!(
+        serde_json::to_value(CalcCommand::Dot).unwrap(),
+        json!({ "type": "dot" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::ClearAll).unwrap(),
+        json!({ "type": "clearAll" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::Digit { digit: 7 }).unwrap(),
+        json!({ "type": "digit", "digit": 7 })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::Unary {
+            op: UnaryOp::Square
+        })
+        .unwrap(),
+        json!({ "type": "unary", "op": "square" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::Binary { op: BinaryOp::Xor }).unwrap(),
+        json!({ "type": "binary", "op": "xor" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::SetRadix {
+            radix: Radix::Hexadecimal
+        })
+        .unwrap(),
+        json!({ "type": "setRadix", "radix": "hexadecimal" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::SetWordSize {
+            size: WordSize::Byte
+        })
+        .unwrap(),
+        json!({ "type": "setWordSize", "size": "byte" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::SetAngleUnit {
+            unit: AngleUnit::Deg
+        })
+        .unwrap(),
+        json!({ "type": "setAngleUnit", "unit": "deg" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::Constant { id: ConstantId::Pi }).unwrap(),
+        json!({ "type": "constant", "id": "pi" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::ToggleBit { bit: 63 }).unwrap(),
+        json!({ "type": "toggleBit", "bit": 63 })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::SetExpression {
+            text: "0xFF".into()
+        })
+        .unwrap(),
+        json!({ "type": "setExpression", "text": "0xFF" })
+    );
+}
+
+#[test]
+fn commands_round_trip() {
+    let commands = [
+        CalcCommand::Digit { digit: 0 },
+        CalcCommand::Memory {
+            op: calc_core::MemoryOp::Store,
+        },
+        CalcCommand::OpenGroup,
+        CalcCommand::CloseGroup,
+        CalcCommand::Percent,
+        CalcCommand::ToggleSign,
+        CalcCommand::Equals,
+    ];
+    for command in commands {
+        let encoded = serde_json::to_string(&command).unwrap();
+        let decoded: CalcCommand = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, command);
+    }
+}
+
+#[test]
+fn error_info_serializes_code_and_args() {
+    let error = ErrorInfo::new(ErrorCode::DivideByZero);
+    assert_eq!(
+        serde_json::to_value(&error).unwrap(),
+        json!({ "code": "DIVIDE_BY_ZERO", "args": [] })
+    );
+
+    let error = ErrorInfo::with_args(ErrorCode::UnknownUnit, vec!["furlong".into()]);
+    assert_eq!(
+        serde_json::to_value(&error).unwrap(),
+        json!({ "code": "UNKNOWN_UNIT", "args": ["furlong"] })
+    );
+}
+
+#[test]
+fn calc_view_uses_camel_case_and_null_optionals() {
+    let view = CalcView {
+        mode: Mode::Programmer,
+        expression: "255".into(),
+        value: "255".into(),
+        memory: None,
+        programmer: Some(ProgrammerView {
+            radix: Radix::Hexadecimal,
+            word_size: WordSize::Byte,
+            binary: "11111111".into(),
+            octal: "377".into(),
+            decimal: "255".into(),
+            hexadecimal: "FF".into(),
+            bits: "11111111".into(),
+        }),
+        error: None,
+    };
+
+    let encoded = serde_json::to_value(&view).unwrap();
+    assert_eq!(encoded["mode"], "programmer");
+    assert_eq!(encoded["value"], "255");
+    assert_eq!(encoded["memory"], serde_json::Value::Null);
+    assert_eq!(encoded["error"], serde_json::Value::Null);
+    assert_eq!(encoded["programmer"]["radix"], "hexadecimal");
+    assert_eq!(encoded["programmer"]["wordSize"], "byte");
+    assert_eq!(encoded["programmer"]["bits"], "11111111");
+
+    let decoded: CalcView = serde_json::from_value(encoded).unwrap();
+    assert_eq!(decoded, view);
+}
+
+#[test]
+fn command_validation_rejects_out_of_range_values() {
+    assert!(CalcCommand::Digit { digit: 9 }.validate().is_ok());
+    assert_eq!(
+        CalcCommand::Digit { digit: 10 }
+            .validate()
+            .unwrap_err()
+            .code,
+        ErrorCode::InvalidInput
+    );
+    assert!(CalcCommand::ToggleBit { bit: 63 }.validate().is_ok());
+    assert_eq!(
+        CalcCommand::ToggleBit { bit: 64 }
+            .validate()
+            .unwrap_err()
+            .code,
+        ErrorCode::InvalidInput
+    );
+    assert_eq!(
+        CalcCommand::SetExpression {
+            text: "1".repeat(1001)
+        }
+        .validate()
+        .unwrap_err()
+        .code,
+        ErrorCode::InvalidInput
+    );
+}

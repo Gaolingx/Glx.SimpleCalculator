@@ -1,0 +1,19 @@
+# Rust build output
+/target/
+/src-tauri/target/
+**/*.rs.bk
+
+# Frontend
+/node_modules/
+/dist/
+/.vite/
+coverage/
+
+# Local release artifacts and diagnostics
+/release/
+/artifacts/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
