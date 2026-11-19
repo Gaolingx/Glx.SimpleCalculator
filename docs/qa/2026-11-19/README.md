@@ -76,3 +76,26 @@
 
 - `t6-light-zh-CN-history.png`、`t6-light-en-US-history.png`、`t6-dark-zh-CN-history.png`、`t6-dark-en-US-history.png`（440×820，1x）
 
+# T7 剪贴板 + 右键菜单 — 2026-11-19
+
+- 方式：Tauri dev + WebView2 CDP（真实 IPC 与系统剪贴板）；截图使用 CDP 设备模拟 440×820（1x）与真实 175% DPI 各一套。QA 前后已恢复系统剪贴板与持久化设置。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 复制 | 显示区复制按钮 → 原始值 `1234567`；右键「复制显示值」→ `1,234,567`；均提示「已复制」 |
+| 粘贴 | Ctrl+V `1,234` → `1234`；全角 `１２３＋４５` → `168`；表达式 `2×(3+4)` → `14`（表达式行保留 `2 × (3 + 4)`） |
+| 进制前缀 | `0xFF` → `255`（基本模式转十进制，BigInt 不丢精度） |
+| 校验 | 1,001 字符 → 「粘贴内容过长」；空剪贴板 → 「剪贴板为空」；`abc` → 「剪贴板内容无法粘贴」且显示值保持不变 |
+| 右键菜单 | 4 项：复制原始值（Ctrl+C）/ 复制显示值 / 粘贴（Ctrl+V）/ 清除（Esc）；无值时复制项禁用；Esc 关闭菜单不清值 |
+| 覆盖层 | 菜单打开时 Ctrl+H 先关闭菜单再打开历史；菜单不浮于抽屉之上 |
+| 布局 | 440×820 下 light/dark × zh-CN/en-US 菜单完整可见，无溢出 |
+| 控制台 | 0 error / 0 warning |
+| 测试 | 前端 93 项、Rust 103 项通过 |
+
+## 截图
+
+- `t7-light-zh-CN-menu.png`、`t7-light-en-US-menu.png`、`t7-dark-zh-CN-menu.png`、`t7-dark-en-US-menu.png`（440×820，1x）
+- `t7-tauri-verified.png`（真实 Tauri WebView2，`2 + 3 =` 与右键菜单，772×1437 @175%）
+

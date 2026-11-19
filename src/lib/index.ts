@@ -32,6 +32,7 @@ export {
   isCalcMode,
   normalizeCalcView,
   normalizeHistory,
+  readClipboardText,
   resetSession,
 } from "./ipc";
 export type {
@@ -48,6 +49,8 @@ export type {
   UnaryOp,
 } from "./ipc";
 export { isCompletedCalculation, recallCommand } from "./history";
+export { MAX_PASTE_CHARS, cleanPaste, pasteCommands } from "./clipboard";
+export type { PasteFailure, PasteRadix, PasteResult } from "./clipboard";
 export { formatExpression, formatNumber, groupInteger } from "./format";
 export type { FormatNumberOptions } from "./format";
 export { commandForKeyboard, isEditableTarget } from "./keyboard";

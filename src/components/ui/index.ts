@@ -4,6 +4,8 @@ export { SoftCard } from "./SoftCard";
 export type { SoftCardPadding, SoftCardProps } from "./SoftCard";
 export { SoftInput } from "./SoftInput";
 export type { SoftInputProps } from "./SoftInput";
+export { SoftMenu } from "./SoftMenu";
+export type { SoftMenuItem, SoftMenuProps } from "./SoftMenu";
 export { SoftDialog } from "./SoftDialog";
 export type { SoftDialogProps, SoftDialogVariant } from "./SoftDialog";
 export { SoftSegmentedControl } from "./SoftSegmentedControl";

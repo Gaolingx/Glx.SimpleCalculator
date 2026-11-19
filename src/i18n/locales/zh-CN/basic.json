@@ -28,5 +28,17 @@
     "add": "记忆加",
     "subtract": "记忆减",
     "store": "存储记忆"
+  },
+  "contextMenu": {
+    "label": "计算结果菜单",
+    "copyRaw": "复制原始值",
+    "copyDisplay": "复制显示值",
+    "paste": "粘贴",
+    "clear": "清除"
+  },
+  "paste": {
+    "empty": "剪贴板为空",
+    "tooLong": "粘贴内容过长",
+    "invalid": "剪贴板内容无法粘贴"
   }
 }

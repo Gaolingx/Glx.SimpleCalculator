@@ -13,12 +13,15 @@ import { useCalcStore } from "../../stores/calc";
 import { useHistoryStore } from "../../stores/history";
 import { useSettingsStore } from "../../stores/settings";
 import { useUiStore } from "../../stores/ui";
+import { ToastProvider } from "../../components/ui";
 import { BasicPage } from "./BasicPage";
 
 const backend = vi.hoisted(() => ({
   tauri: true,
   calcCommand: vi.fn<(command: CalcCommand) => Promise<CalcView>>(),
   addHistory: vi.fn<(input: unknown) => Promise<unknown[]>>(),
+  copyText: vi.fn<(text: string) => Promise<void>>(),
+  readClipboardText: vi.fn<() => Promise<string>>(),
 }));
 
 vi.mock("../../lib/ipc", async (importOriginal) => {
@@ -28,6 +31,8 @@ vi.mock("../../lib/ipc", async (importOriginal) => {
     isTauriRuntime: () => backend.tauri,
     calcCommand: backend.calcCommand,
     addHistory: backend.addHistory,
+    copyText: backend.copyText,
+    readClipboardText: backend.readClipboardText,
   };
 });
 
@@ -39,8 +44,16 @@ function valueText(): string {
   return screen.getByTestId("calc-value").textContent ?? "";
 }
 
-function press(key: string): void {
-  fireEvent.keyDown(window, { key });
+function press(key: string, init: KeyboardEventInit = {}): void {
+  fireEvent.keyDown(window, { key, ...init });
+}
+
+function renderPage() {
+  return render(
+    <ToastProvider>
+      <BasicPage />
+    </ToastProvider>,
+  );
 }
 
 beforeAll(async () => {
@@ -53,6 +66,10 @@ beforeEach(() => {
   backend.calcCommand.mockResolvedValue(view());
   backend.addHistory.mockReset();
   backend.addHistory.mockResolvedValue([]);
+  backend.copyText.mockReset();
+  backend.copyText.mockResolvedValue(undefined);
+  backend.readClipboardText.mockReset();
+  backend.readClipboardText.mockResolvedValue("");
   useCalcStore.setState({ views: {} });
   useHistoryStore.setState({ entries: [], loaded: false, loading: false, error: null });
   useSettingsStore.setState({
@@ -70,7 +87,7 @@ afterEach(() => {
 
 describe("BasicPage", () => {
   it("sends keypad commands through the IPC contract", async () => {
-    render(<BasicPage />);
+    renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "7" }));
     fireEvent.click(screen.getByRole("button", { name: i18n.t("basic:keys.add") }));
@@ -92,7 +109,7 @@ describe("BasicPage", () => {
         ? view({ expression: "2 + 3 =", value: "5" })
         : view(),
     );
-    render(<BasicPage />);
+    renderPage();
 
     press("2");
     press("+");
@@ -113,7 +130,7 @@ describe("BasicPage", () => {
     backend.calcCommand.mockResolvedValue(
       view({ expression: "2 + 3 =", value: "5" }),
     );
-    render(<BasicPage />);
+    renderPage();
 
     press("Enter");
 
@@ -133,7 +150,7 @@ describe("BasicPage", () => {
     backend.calcCommand.mockResolvedValue(
       view({ expression: "2 + 3 =", value: "5" }),
     );
-    render(<BasicPage />);
+    renderPage();
 
     press("Enter");
 
@@ -143,7 +160,7 @@ describe("BasicPage", () => {
 
   it("formats the value with grouping driven by settings", async () => {
     backend.calcCommand.mockResolvedValue(view({ value: "1234567" }));
-    render(<BasicPage />);
+    renderPage();
 
     press("7");
     await waitFor(() => expect(valueText()).toBe("1,234,567"));
@@ -164,7 +181,7 @@ describe("BasicPage", () => {
         error: { code: "DIVIDE_BY_ZERO", args: [] },
       }),
     );
-    render(<BasicPage />);
+    renderPage();
 
     press("Enter");
 
@@ -176,7 +193,7 @@ describe("BasicPage", () => {
 
   it("shows the memory indicator and enables recall once memory exists", async () => {
     const initial = i18n.t("basic:memoryKeys.clear");
-    render(<BasicPage />);
+    renderPage();
     expect(screen.getByRole("button", { name: initial }).hasAttribute("disabled")).toBe(true);
 
     backend.calcCommand.mockResolvedValue(view({ value: "7", memory: "7" }));
@@ -190,7 +207,7 @@ describe("BasicPage", () => {
 
   it("does not intercept keys while an overlay is open", async () => {
     useUiStore.setState({ overlay: "settings" });
-    render(<BasicPage />);
+    renderPage();
 
     press("5");
 
@@ -199,11 +216,170 @@ describe("BasicPage", () => {
 
   it("reports preview mode instead of pretending to calculate", async () => {
     backend.tauri = false;
-    render(<BasicPage />);
+    renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "7" }));
 
     expect(backend.calcCommand).not.toHaveBeenCalled();
     expect(screen.getByText(i18n.t("basic:previewNotice"))).toBeTruthy();
+  });
+
+  it("copies the raw value from the display button", async () => {
+    useCalcStore.setState({ views: { basic: view({ value: "1234" }) } });
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common:copy") }));
+
+    await waitFor(() => expect(backend.copyText).toHaveBeenCalledWith("1234"));
+    expect(await screen.findByText(i18n.t("common:copied"))).toBeTruthy();
+  });
+
+  it("copies raw values with Ctrl+C and grouped values from the menu", async () => {
+    useCalcStore.setState({ views: { basic: view({ value: "1234" }) } });
+    renderPage();
+
+    press("c", { ctrlKey: true });
+    await waitFor(() => expect(backend.copyText).toHaveBeenCalledWith("1234"));
+
+    backend.copyText.mockClear();
+    fireEvent.contextMenu(screen.getByTestId("calc-value"));
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: i18n.t("basic:contextMenu.copyDisplay") }),
+    );
+
+    await waitFor(() => expect(backend.copyText).toHaveBeenCalledWith("1,234"));
+  });
+
+  it("pastes cleaned clipboard text into the session", async () => {
+    backend.readClipboardText.mockResolvedValue("1,234");
+    renderPage();
+
+    press("v", { ctrlKey: true });
+
+    await waitFor(() =>
+      expect(backend.calcCommand).toHaveBeenCalledWith({
+        type: "setExpression",
+        text: "1234",
+      }),
+    );
+  });
+
+  it("pastes radix literals as decimals in the basic session", async () => {
+    backend.readClipboardText.mockResolvedValue("0xFF");
+    renderPage();
+
+    press("v", { ctrlKey: true });
+
+    await waitFor(() =>
+      expect(backend.calcCommand).toHaveBeenCalledWith({
+        type: "setExpression",
+        text: "255",
+      }),
+    );
+  });
+
+  it("reports invalid clipboard content without sending a command", async () => {
+    backend.readClipboardText.mockResolvedValue("abc");
+    renderPage();
+
+    press("v", { ctrlKey: true });
+
+    expect(await screen.findByText(i18n.t("basic:paste.invalid"))).toBeTruthy();
+    expect(backend.calcCommand).not.toHaveBeenCalled();
+  });
+
+  it("reports clipboard read failures", async () => {
+    backend.readClipboardText.mockRejectedValue(new Error("denied"));
+    renderPage();
+
+    press("v", { ctrlKey: true });
+
+    expect(await screen.findByText(i18n.t("errors:INTERNAL"))).toBeTruthy();
+  });
+
+  it("opens the context menu with copy, paste and clear actions", async () => {
+    useCalcStore.setState({ views: { basic: view({ value: "42" }) } });
+    renderPage();
+
+    fireEvent.contextMenu(screen.getByTestId("calc-value"));
+
+    expect(
+      screen.getByRole("menu", { name: i18n.t("basic:contextMenu.label") }),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("menuitem", {
+        name: new RegExp(i18n.t("basic:contextMenu.clear")),
+      }),
+    );
+
+    await waitFor(() =>
+      expect(backend.calcCommand).toHaveBeenCalledWith({ type: "clearAll" }),
+    );
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("pastes from the context menu", async () => {
+    backend.readClipboardText.mockResolvedValue("7");
+    renderPage();
+
+    fireEvent.contextMenu(screen.getByTestId("calc-value"));
+    fireEvent.click(
+      screen.getByRole("menuitem", {
+        name: new RegExp(i18n.t("basic:contextMenu.paste")),
+      }),
+    );
+
+    await waitFor(() =>
+      expect(backend.calcCommand).toHaveBeenCalledWith({
+        type: "setExpression",
+        text: "7",
+      }),
+    );
+  });
+
+  it("disables copy actions when the display is empty", () => {
+    renderPage();
+
+    fireEvent.contextMenu(screen.getByTestId("calc-value"));
+
+    expect(
+      screen
+        .getByRole("menuitem", {
+          name: new RegExp(i18n.t("basic:contextMenu.copyRaw")),
+        })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("menuitem", { name: i18n.t("basic:contextMenu.copyDisplay") })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
+  it("closes the context menu when an overlay opens", () => {
+    useCalcStore.setState({ views: { basic: view({ value: "42" }) } });
+    renderPage();
+
+    fireEvent.contextMenu(screen.getByTestId("calc-value"));
+    expect(screen.getByRole("menu")).toBeTruthy();
+
+    act(() => {
+      useUiStore.setState({ overlay: "settings" });
+    });
+
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("does not intercept clipboard shortcuts while an overlay is open", () => {
+    useCalcStore.setState({ views: { basic: view({ value: "42" }) } });
+    useUiStore.setState({ overlay: "settings" });
+    renderPage();
+
+    press("c", { ctrlKey: true });
+    press("v", { ctrlKey: true });
+
+    expect(backend.copyText).not.toHaveBeenCalled();
+    expect(backend.readClipboardText).not.toHaveBeenCalled();
   });
 });

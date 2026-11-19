@@ -13,6 +13,7 @@ export interface DisplayProps {
   error: ErrorCode | null;
   grouping: boolean;
   memory: boolean;
+  onCopy: () => void;
 }
 
 const SIZE_STEPS: ReadonlyArray<readonly [number, string]> = [
@@ -31,7 +32,14 @@ function sizeFor(text: string): string {
   return "xs";
 }
 
-export function Display({ expression, value, error, grouping, memory }: DisplayProps) {
+export function Display({
+  expression,
+  value,
+  error,
+  grouping,
+  memory,
+  onCopy,
+}: DisplayProps) {
   const { t } = useTranslation();
   const displayValue = value ? formatNumber(value, { grouping }) : "0";
   const errorText = error ? t(`errors:${error}`) : "";
@@ -79,6 +87,28 @@ export function Display({ expression, value, error, grouping, memory }: DisplayP
           >
             {formattedExpression || "\u00a0"}
           </div>
+          <button
+            type="button"
+            className={styles.copy}
+            onClick={onCopy}
+            disabled={!value}
+            aria-label={t("common:copy")}
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="9" y="9" width="11" height="11" rx="2.5" />
+              <path d="M15 6.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7a2 2 0 002 2h.5" />
+            </svg>
+          </button>
         </div>
         <div
           ref={valueRef}

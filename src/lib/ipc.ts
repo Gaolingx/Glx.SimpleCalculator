@@ -448,3 +448,14 @@ export async function copyText(text: string): Promise<void> {
   }
   await invokeCommand<void>("clipboard_copy", { text });
 }
+
+export async function readClipboardText(): Promise<string> {
+  if (!isTauriRuntime()) {
+    if (typeof navigator === "undefined" || !navigator.clipboard?.readText) {
+      throw new IpcError("INTERNAL");
+    }
+    return navigator.clipboard.readText();
+  }
+  const text = await invokeCommand<unknown>("clipboard_read");
+  return typeof text === "string" ? text : "";
+}

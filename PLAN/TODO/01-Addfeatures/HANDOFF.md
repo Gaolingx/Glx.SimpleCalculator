@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T6 完成**（2026-11-19）：历史存储/抽屉/恢复/删除/清空/复制与设置联动；下一步 T7 |
+| 当前进度 | **T7 完成**（2026-11-19）：剪贴板读写、粘贴清洗、右键菜单与复制入口；下一步 T8 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -164,6 +164,17 @@ setx PATH "%PATH%;E:\node"
 - 门禁：`cargo fmt --check` / `clippy -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 338.33 kB（gzip 105.91 kB）、CSS 28.18 kB（gzip 5.61 kB），仍在 250 kB gzip 预算内。
 - QA（Tauri dev + WebView2 CDP）：`2 + 3 =`、`10 × 2 =` 各生成一条，抽屉最新在前且分组正确；恢复 `2 + 3 =` 后显示 `5` 并保留表达式，继续 `× 2 =` 得 `10` 并新增条目；复制写入剪贴板原始值 `10`；删除/清空（确认→取消→确认）即时更新 `history.json`；重启应用后条目保留而会话归零；关闭历史开关后 `9 × 9 =` 不记录；105 条后将上限改为 100，内存列表与文件均截断为 100（保留最新）。控制台 0 error。
 - 截图：`docs/qa/2026-11-19/t6-{light,dark}-{zh-CN,en-US}-history.png`（Edge headless 440×820，`scrollWidth/Height` 与视口一致，四语/主题组合无溢出）。
+
+**T7 实测记录（2026-11-19）**
+
+- 剪贴板桥：`src-tauri/src/clipboard.rs` 新增 `clipboard_read`（长度上限 10,000）。Windows 在剪贴板无文本时 `read_text` 返回错误，命令将该情况映射为空串并记 debug 日志，前端提示「剪贴板为空」而非 `INTERNAL`。读写均在 Rust 完成，未引入插件 JS 包。
+- 粘贴清洗：新增 `src/lib/clipboard.ts`。归一化全角 ASCII（U+FF01–FF5E）、表意空格、分组符（`,` `_` 与普通/NBSP/narrow/thin space）、排版运算符（`− – — × · ÷`）；拒绝换行/控制字符、超过 1,000 字符、无数字或含非法字符的输入。整串 `0x/0b/0o` 字面量识别为 radix 粘贴：程序员模式切 radix 并插入数字，其他模式转十进制（`0xFF → 255`），BigInt 保证 64 位以上不丢精度。
+- 右键菜单：新增 `components/ui/SoftMenu`（portal、视口夹取、方向键/Home/End、Esc/Tab、外部点击与滚动关闭、焦点恢复）。标准页在显示区/键盘区域右键打开，菜单项为复制原始值（Ctrl+C）、复制显示值（按当前分组设置）、粘贴（Ctrl+V）、清除（Esc）；无值时复制项禁用。菜单 `--z-menu: 55`，覆盖层打开时订阅 UI store 自动关闭，避免浮在抽屉/设置之上。
+- 复制入口：`Display` 增加复制按钮（`aria-label`，复制原始值）；Ctrl+C 复制原始值、Ctrl+V 走清洗；成功/失败均有 toast；覆盖层打开或输入框聚焦时不拦截。
+- 测试：前端 93 项（新增 `lib/clipboard` 10、`SoftMenu` 5、`BasicPage` 11）；Rust 103 项不变。
+- 门禁：`cargo fmt --check` / `clippy -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 344.32 kB（gzip 107.83 kB）、CSS 30.48 kB（gzip 5.86 kB）。
+- QA（Tauri dev + WebView2 CDP，真实系统剪贴板）：显示区复制原始值 `1234567`，菜单复制显示值 `1,234,567`；Ctrl+V 粘贴 `1,234` → `1234`，全角 `１２３＋４５` → `168`，表达式 `2×(3+4)` → `14` 且表达式行保留；`0xFF` → `255`；1,001 字符 → 「粘贴内容过长」；空剪贴板 → 「剪贴板为空」；`abc` → 「剪贴板内容无法粘贴」且值不变；Esc 关闭菜单不清值；Ctrl+H 关闭菜单并打开历史。控制台 0 error；QA 前后已恢复系统剪贴板与设置。
+- 截图：`docs/qa/2026-11-19/t7-{light,dark}-{zh-CN,en-US}-menu.png`（440×820）+ `t7-tauri-verified.png`（772×1437 @175%）。
 
 
 ### 1.4 参考截图 → 布局结论
@@ -380,6 +391,7 @@ pub enum CalcCommand {
 
 > T5 已实现 `calc_command` 与 `session_reset`。业务错误走 `CalcView.error`；`Result<_, ErrorInfo>` 仅表示协议级失败（当前恒为 `Ok`），前端仍按错误码统一处理。
 > T6 新增 `CalcCommand::Recall { expression, value }` 与 `history_list/add/delete/clear(mode)`、`clipboard_copy`。历史条目随 `history.json` 持久化，恢复采用「不重新求值」语义。
+> T7 新增 `clipboard_read`（系统剪贴板读取，空剪贴板返回空串）；粘贴清洗与右键菜单均在前端，清洗长度上限 1,000 字符。
 
 契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
@@ -622,8 +634,8 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 ### 4.7 输入校验与错误文案
 
 - 数字输入：仅允许数字、单个小数点、负号（按模式限制）；非法按键忽略并轻微提示（不弹窗）。
-- 复制：默认复制**原始值**（无分组）；右键菜单可复制**显示值**（带分组）；程序员模式复制当前进制字符串；历史条目复制其原始值。
-- 粘贴：清洗空格/分组符/全角字符 → 归一化；程序员模式识别 `0x/0b/0o` 前缀并切进制；长度 >1000 拒绝。
+- 复制：默认复制**原始值**（无分组）；右键菜单可复制**显示值**（按当前分组设置，默认带分组）；程序员模式复制当前进制字符串；历史条目复制其原始值。
+- 粘贴：清洗空格/分组符/全角字符 → 归一化；程序员模式识别 `0x/0b/0o` 前缀并切进制（其他模式转十进制）；长度 >1000 拒绝。
 - 错误统一为 `ErrorCode` → i18n 键（`errors.DIVIDE_BY_ZERO` 等），显示区以 danger 色显示短句，表达式行保留原输入；数字/退格可恢复，运算符在错误态先清除再执行；`C`/`Esc` 立即清除。
 - 关键错误：除以零、溢出、定义域（√负数、log≤0）、语法错误、不支持的运算、汇率离线、未知单位。
 
@@ -666,7 +678,7 @@ src/i18n/locales/en-US/...（同构）
 | T4 | 核心 v1：值/解析/基本引擎 | M1 | T0 | `value/parser/engine/ops::basic`、错误、记忆、≥60 单测 | `cargo test -p calc-core` | done |
 | T5 | 标准模式 UI + 格式化 + 键盘 | M2 | T3,T4 | 标准页、`Display`、`Keypad`、`lib/format.ts`（分组）、键盘映射 | 手工用例表；Vitest 格式化 | done |
 | T6 | 历史记录 | M2 | T4,T5 | 存储命令、历史抽屉、恢复/删除/清空/复制 | 重启保留；上限；两语言 | done |
-| T7 | 剪贴板 + 校验 + 右键菜单 | M2 | T5 | `lib/clipboard.ts`、粘贴清洗、`SoftMenu`、错误提示 | 非法粘贴；0x/0b；Ctrl+C/V | pending |
+| T7 | 剪贴板 + 校验 + 右键菜单 | M2 | T5 | `lib/clipboard.ts`、粘贴清洗、`SoftMenu`、错误提示 | 非法粘贴；0x/0b；Ctrl+C/V | done |
 | T8 | 科学型 | M3 | T4 | `ops::scientific`、科学键盘、角度制、F-E、定义域错误 | sin/cos/ln/阶乘/幂单测；RAD/DEG | pending |
 | T9 | 程序员核心 | M4 | T4 | 进制/字宽/位运算/旋转/补码、真值表与属性测试 | 掩码、环绕、BYTE/QWORD 边界 | pending |
 | T10 | 程序员 UI | M4 | T9 | 进制/字宽切换、四进制显示、位网格、无效输入拦截 | 点击翻转位；切换进制同步 | pending |
@@ -733,14 +745,14 @@ npm run typecheck && npm run test
 ### M2 标准模式 UI + 历史 + 设置（2 人日）
 
 **任务**
-- [x] `Display`（表达式行 + 主值 + 自动缩字号 + 分组渲染 + 防抖 `aria-live`；复制按钮随 T7）
+- [x] `Display`（表达式行 + 主值 + 自动缩字号 + 分组渲染 + 防抖 `aria-live` + 复制按钮）
 - [x] `Keypad`（4 列网格，对齐截图；hover/active 动效）
 - [x] 记忆行（MC/MR/M+/M−/MS，单槽）；记忆面板需多槽记忆，未纳入本次迭代
 - [x] 历史抽屉（按日期分组、按当前模式展示、点击恢复、删除、清空确认、复制、空状态）
-- [ ] 剪贴板：复制原始值、粘贴清洗、无效提示
+- [x] 剪贴板：复制原始值、粘贴清洗、无效提示
 - [ ] 设置面板：主题/语言/分组开关/小数位/历史开关（`SoftSwitch`、`SoftSegmentedControl`）
-- [x] 基本模式快捷键 + 覆盖层/输入框焦点门控（复制粘贴与 F1 说明随 T7/T16）
-- [x] Vitest：格式化、键盘映射、BasicPage 组件（粘贴清洗随 T7）
+- [x] 基本模式快捷键（含 Ctrl+C/V）+ 覆盖层/输入框焦点门控（F1 说明随 T16）
+- [x] Vitest：格式化、键盘映射、BasicPage 组件、粘贴清洗、SoftMenu
 
 **验收**
 - 两主题、两语言下布局无溢出；100%/150% 缩放正常
@@ -1073,6 +1085,7 @@ rm -rf src-tauri/target/release/bundle
 | 18 | 4.7 / T4 | CE 后待处理表达式的显示语义未定义 | T5 明确：有待处理表达式时 CE 保留表达式并显示 `0`；无待处理表达式时清空显示与结果（附引擎测试） |
 | 19 | 3.5 / T5 | 基本模式的 E 记法阈值未定义 | 基本模式最多 16 位有效数字；指数 ≥16 或 ≤−16 转 E 记法，阈值由 `lib/format.ts` 参数化 |
 | 20 | 3.4 / T6 | 历史记录由谁写入、去重与恢复语义未定义 | 前端在完成的 `=` 后调用 `history_add`；条目最新在前、仅折叠与最新一条相同的连续重复；恢复使用 `Recall` 不重新求值；列表/清空按模式隔离 |
+| 21 | 3.6 / 4.7 | T7 前未说明非程序员模式粘贴 `0x/0b/0o` 的行为，「复制显示值」是否跟随分组开关也不明确 | T7 明确：程序员模式切 radix 并插入数字，其他模式转十进制；复制显示值按当前分组设置，默认带分组 |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 

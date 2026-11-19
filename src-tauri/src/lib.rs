@@ -45,6 +45,7 @@ pub fn run() {
             history::history_delete,
             history::history_clear,
             clipboard::clipboard_copy,
+            clipboard::clipboard_read,
         ])
         .run(tauri::generate_context!())
         .expect("failed to launch Glx Calculator");

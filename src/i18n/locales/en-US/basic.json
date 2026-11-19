@@ -28,5 +28,17 @@
     "add": "Add to memory",
     "subtract": "Subtract from memory",
     "store": "Store in memory"
+  },
+  "contextMenu": {
+    "label": "Result menu",
+    "copyRaw": "Copy value",
+    "copyDisplay": "Copy displayed value",
+    "paste": "Paste",
+    "clear": "Clear"
+  },
+  "paste": {
+    "empty": "Clipboard is empty",
+    "tooLong": "Pasted content is too long",
+    "invalid": "Clipboard content cannot be pasted"
   }
 }
