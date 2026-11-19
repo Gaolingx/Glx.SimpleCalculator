@@ -11,6 +11,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { cx } from "./cx";
+import { EXIT_BASE_MS } from "./usePresence";
 import styles from "./SoftToast.module.css";
 
 export type ToastVariant = "info" | "success" | "warning" | "danger";
@@ -79,24 +80,42 @@ export function useToast(): ToastApi {
 
 function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: number) => void }) {
   const { t } = useTranslation();
+  const [closing, setClosing] = useState(false);
+  const requestDismiss = useCallback(() => setClosing(true), []);
 
   useEffect(() => {
-    if (toast.duration <= 0) {
+    if (toast.duration <= 0 || closing) {
       return undefined;
     }
-    const timer = window.setTimeout(() => onDismiss(toast.id), toast.duration);
+    const timer = window.setTimeout(requestDismiss, toast.duration);
     return () => window.clearTimeout(timer);
-  }, [toast.duration, toast.id, onDismiss]);
+  }, [toast.duration, requestDismiss, closing]);
+
+  useEffect(() => {
+    if (!closing) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => onDismiss(toast.id), EXIT_BASE_MS);
+    return () => window.clearTimeout(timer);
+  }, [closing, onDismiss, toast.id]);
 
   return (
-    <div role="status" aria-live="polite" className={cx(styles.toast, styles[toast.variant])}>
+    <div
+      role="status"
+      aria-live="polite"
+      className={cx(
+        styles.toast,
+        styles[toast.variant],
+        closing && styles.closing,
+      )}
+    >
       <span className={styles.dot} aria-hidden="true" />
       <span className={styles.message}>{toast.message}</span>
       <button
         type="button"
         className={styles.close}
         aria-label={t("dismiss")}
-        onClick={() => onDismiss(toast.id)}
+        onClick={requestDismiss}
       >
         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
           <path

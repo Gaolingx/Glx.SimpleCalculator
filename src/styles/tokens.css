@@ -65,10 +65,12 @@
   --leading-label: 1.4;
   --tracking-label: 0.02em;
 
+  /* Motion: fast = hover/color feedback, base = panels & controls, slow = card lift. */
   --duration-fast: 200ms;
   --duration-base: 300ms;
   --duration-slow: 500ms;
   --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --delay-tooltip: 400ms;
 
   --z-tooltip: 40;
   --z-dialog: 50;

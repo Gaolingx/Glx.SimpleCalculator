@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SoftCombobox } from "./SoftCombobox";
@@ -34,7 +34,7 @@ afterEach(() => {
 });
 
 describe("SoftCombobox", () => {
-  it("opens the listbox and selects an option", () => {
+  it("opens the listbox and selects an option", async () => {
     const { trigger, onChange } = renderCombobox();
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
 
@@ -44,11 +44,11 @@ describe("SoftCombobox", () => {
 
     fireEvent.click(screen.getByRole("option", { name: /Kilometer/ }));
     expect(onChange).toHaveBeenCalledWith("km");
-    expect(screen.queryByRole("listbox")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
   });
 
-  it("moves with the keyboard and commits with Enter", () => {
+  it("moves with the keyboard and commits with Enter", async () => {
     const { trigger, onChange } = renderCombobox();
 
     fireEvent.keyDown(trigger, { key: "ArrowDown" });
@@ -57,16 +57,16 @@ describe("SoftCombobox", () => {
     fireEvent.keyDown(trigger, { key: "Enter" });
 
     expect(onChange).toHaveBeenCalledWith("km");
-    expect(screen.queryByRole("listbox")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   });
 
-  it("closes on Escape without changing the value", () => {
+  it("closes on Escape without changing the value", async () => {
     const { trigger, onChange } = renderCombobox();
     fireEvent.click(trigger);
     fireEvent.keyDown(trigger, { key: "Escape" });
 
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.queryByRole("listbox")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   });
 
   it("jumps to the first matching option on typeahead", () => {
@@ -86,12 +86,12 @@ describe("SoftCombobox", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("closes when the user clicks outside", () => {
+  it("closes when the user clicks outside", async () => {
     const { trigger } = renderCombobox();
     fireEvent.click(trigger);
     expect(screen.getByRole("listbox")).toBeTruthy();
 
     fireEvent.pointerDown(document.body);
-    expect(screen.queryByRole("listbox")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   });
 });

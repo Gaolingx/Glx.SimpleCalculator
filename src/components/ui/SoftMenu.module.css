@@ -13,6 +13,11 @@
   animation: menu-in var(--duration-fast) var(--ease-soft);
 }
 
+.menu.closing {
+  pointer-events: none;
+  animation: menu-out var(--duration-fast) var(--ease-soft) forwards;
+}
+
 .menu:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring), var(--shadow-card-hover);
@@ -93,8 +98,13 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .menu {
-    animation: none;
+@keyframes menu-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-0.25rem) scale(0.98);
   }
 }

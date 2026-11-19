@@ -10,6 +10,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { cx } from "./cx";
+import { EXIT_FAST_MS, usePresence } from "./usePresence";
 import styles from "./SoftCombobox.module.css";
 
 export interface ComboboxOption<T extends string> {
@@ -59,6 +60,7 @@ export function SoftCombobox<T extends string>({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const { mounted, closing } = usePresence(open, EXIT_FAST_MS);
   const selectedIndex = options.findIndex((option) => option.value === value);
   const [activeIndex, setActiveIndex] = useState(Math.max(0, selectedIndex));
   const [position, setPosition] = useState({ left: 0, top: 0, width: MIN_WIDTH });
@@ -263,14 +265,14 @@ export function SoftCombobox<T extends string>({
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
-      {open && typeof document !== "undefined"
+      {mounted && typeof document !== "undefined"
         ? createPortal(
             <div
               ref={listRef}
               id={listId}
               role="listbox"
               aria-label={ariaLabel}
-              className={styles.popup}
+              className={cx(styles.popup, closing && styles.closing)}
               style={{
                 left: position.left,
                 top: position.top,

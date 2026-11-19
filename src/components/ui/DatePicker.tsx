@@ -25,6 +25,7 @@ import {
   weekdayLabels,
 } from "../../lib/date";
 import { cx } from "./cx";
+import { EXIT_FAST_MS, usePresence } from "./usePresence";
 import styles from "./DatePicker.module.css";
 
 export interface DatePickerProps {
@@ -99,6 +100,7 @@ export function DatePicker({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const { mounted, closing } = usePresence(open, EXIT_FAST_MS);
   const [view, setView] = useState<View>("days");
   const [visibleYear, setVisibleYear] = useState(
     () => parseIsoDate(value)?.year ?? parseIsoDate(todayIso())?.year ?? 2024,
@@ -454,14 +456,14 @@ export function DatePicker({
         </svg>
       </button>
 
-      {open && typeof document !== "undefined"
+      {mounted && typeof document !== "undefined"
         ? createPortal(
             <div
               ref={popupRef}
               id={popupId}
               role="dialog"
               aria-label={ariaLabel}
-              className={styles.popup}
+              className={cx(styles.popup, closing && styles.closing)}
               style={{ left: position.left, top: position.top }}
               onKeyDown={handleKeyDown}
             >

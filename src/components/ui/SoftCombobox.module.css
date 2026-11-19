@@ -78,6 +78,11 @@
   animation: popup-in var(--duration-fast) var(--ease-soft);
 }
 
+.popup.closing {
+  pointer-events: none;
+  animation: popup-out var(--duration-fast) var(--ease-soft) forwards;
+}
+
 .option {
   display: flex;
   align-items: center;
@@ -129,12 +134,13 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .popup {
-    animation: none;
+@keyframes popup-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
-
-  .chevron {
-    transition: none;
+  to {
+    opacity: 0;
+    transform: translateY(-0.25rem) scale(0.98);
   }
 }

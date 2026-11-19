@@ -23,6 +23,11 @@
   animation: enter var(--duration-base) var(--ease-soft);
 }
 
+.toast.closing {
+  pointer-events: none;
+  animation: exit var(--duration-base) var(--ease-soft) forwards;
+}
+
 @keyframes enter {
   from {
     opacity: 0;
@@ -31,6 +36,17 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(0.5rem);
   }
 }
 

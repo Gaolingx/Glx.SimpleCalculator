@@ -28,7 +28,7 @@
 .root:has(> :focus-visible) .bubble {
   opacity: 1;
   visibility: visible;
-  transition-delay: 400ms, 400ms, 0s;
+  transition-delay: var(--delay-tooltip), var(--delay-tooltip), 0s;
 }
 
 .top {

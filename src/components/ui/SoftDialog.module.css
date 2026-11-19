@@ -6,7 +6,7 @@
   padding: var(--spacing-24);
   background: rgba(15, 23, 42, 0.38);
   backdrop-filter: blur(3px);
-  animation: fade-in var(--duration-fast) var(--ease-soft);
+  animation: fade-in var(--duration-base) var(--ease-soft);
 }
 
 .center {

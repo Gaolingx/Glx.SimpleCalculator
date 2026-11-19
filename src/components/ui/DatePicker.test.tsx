@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import i18n, { initI18n } from "../../i18n";
@@ -53,13 +53,13 @@ describe("DatePicker", () => {
     expect(document.activeElement).toBe(cell("2024-02-29"));
   });
 
-  it("selects a leap day and closes", () => {
+  it("selects a leap day and closes", async () => {
     const { onChange } = open();
 
     fireEvent.click(cell("2024-02-29"));
 
     expect(onChange).toHaveBeenCalledWith("2024-02-29");
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("moves focus with the keyboard and selects with Enter", () => {
@@ -102,19 +102,19 @@ describe("DatePicker", () => {
     expect(onChange).toHaveBeenCalledWith("2025-01-29");
   });
 
-  it("selects today or clears from the footer", () => {
+  it("selects today or clears from the footer", async () => {
     const { onChange } = open();
 
     fireEvent.click(screen.getByRole("button", { name: i18n.t("date:picker.today") }));
     expect(onChange).toHaveBeenCalledWith(todayIso());
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
     fireEvent.click(trigger());
     fireEvent.click(screen.getByRole("button", { name: i18n.t("date:picker.clear") }));
     expect(onChange).toHaveBeenCalledWith("");
   });
 
-  it("steps back through views and closes with Escape", () => {
+  it("steps back through views and closes with Escape", async () => {
     open();
 
     fireEvent.click(screen.getByRole("button", { name: /2024/ }));
@@ -124,14 +124,14 @@ describe("DatePicker", () => {
     expect(cell("2024-02-01")).toBeTruthy();
 
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Escape" });
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(document.activeElement).toBe(trigger());
   });
 
-  it("closes on an outside pointer press", () => {
+  it("closes on an outside pointer press", async () => {
     open();
     fireEvent.pointerDown(document.body);
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("opens from the trigger with ArrowDown", () => {

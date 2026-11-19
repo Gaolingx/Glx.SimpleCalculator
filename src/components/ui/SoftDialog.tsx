@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { cx } from "./cx";
+import { EXIT_BASE_MS, usePresence } from "./usePresence";
 import styles from "./SoftDialog.module.css";
 
 export type SoftDialogVariant = "center" | "sheet";
@@ -21,10 +22,6 @@ export interface SoftDialogProps {
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-// Kept in sync with --duration-base so the panel finishes its exit animation
-// before it is unmounted.
-const EXIT_DURATION_MS = 300;
-
 export function SoftDialog({
   open,
   onClose,
@@ -40,20 +37,7 @@ export function SoftDialog({
   const id = useId();
   const titleId = `${id}-title`;
   const descriptionId = `${id}-description`;
-  const [rendered, setRendered] = useState(open);
-  const closing = rendered && !open;
-
-  if (open && !rendered) {
-    setRendered(true);
-  }
-
-  useEffect(() => {
-    if (!closing) {
-      return undefined;
-    }
-    const timer = window.setTimeout(() => setRendered(false), EXIT_DURATION_MS);
-    return () => window.clearTimeout(timer);
-  }, [closing]);
+  const { mounted, closing } = usePresence(open, EXIT_BASE_MS);
 
   useEffect(() => {
     if (!open) {
@@ -103,7 +87,7 @@ export function SoftDialog({
     };
   }, [open, onClose]);
 
-  if (!rendered || typeof document === "undefined") {
+  if (!mounted || typeof document === "undefined") {
     return null;
   }
 

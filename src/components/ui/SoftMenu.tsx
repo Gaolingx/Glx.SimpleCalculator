@@ -10,6 +10,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { cx } from "./cx";
+import { EXIT_FAST_MS, usePresence } from "./usePresence";
 import styles from "./SoftMenu.module.css";
 
 export interface SoftMenuItem {
@@ -43,6 +44,7 @@ export function SoftMenu({ open, x, y, items, onClose, label }: SoftMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const id = useId();
   const [position, setPosition] = useState({ left: x, top: y });
+  const { mounted, closing } = usePresence(open, EXIT_FAST_MS);
   const onCloseRef = useRef(onClose);
 
   useEffect(() => {
@@ -106,7 +108,7 @@ export function SoftMenu({ open, x, y, items, onClose, label }: SoftMenuProps) {
     };
   }, [open]);
 
-  if (!open || typeof document === "undefined") {
+  if (!mounted || typeof document === "undefined") {
     return null;
   }
 
@@ -143,7 +145,7 @@ export function SoftMenu({ open, x, y, items, onClose, label }: SoftMenuProps) {
       role="menu"
       aria-label={label}
       tabIndex={-1}
-      className={styles.menu}
+      className={cx(styles.menu, closing && styles.closing)}
       style={{ left: position.left, top: position.top }}
       onKeyDown={handleMenuKeyDown}
       onContextMenu={(event) => event.preventDefault()}

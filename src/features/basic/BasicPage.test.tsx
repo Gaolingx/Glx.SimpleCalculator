@@ -323,7 +323,7 @@ describe("BasicPage", () => {
     await waitFor(() =>
       expect(backend.calcCommand).toHaveBeenCalledWith({ type: "clearAll" }),
     );
-    expect(screen.queryByRole("menu")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
   });
 
   it("pastes from the context menu", async () => {
@@ -364,7 +364,7 @@ describe("BasicPage", () => {
     ).toBe(true);
   });
 
-  it("closes the context menu when an overlay opens", () => {
+  it("closes the context menu when an overlay opens", async () => {
     useCalcStore.setState({ views: { basic: view({ value: "42" }) } });
     renderPage();
 
@@ -375,7 +375,7 @@ describe("BasicPage", () => {
       useUiStore.setState({ overlay: "settings" });
     });
 
-    expect(screen.queryByRole("menu")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
   });
 
   it("does not intercept clipboard shortcuts while an overlay is open", () => {
