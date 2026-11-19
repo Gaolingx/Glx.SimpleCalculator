@@ -122,7 +122,16 @@ impl Engine {
                 Ok(())
             }
             CalcCommand::ClearEntry => {
-                self.entry = None;
+                if self.tokens.is_empty() {
+                    self.entry = None;
+                    self.result = None;
+                    self.expression.clear();
+                    self.last_op = None;
+                } else {
+                    // Keep the pending expression but show a fresh zero entry.
+                    self.entry = Some(Entry::new("0"));
+                    self.result = None;
+                }
                 self.replace_entry = false;
                 Ok(())
             }

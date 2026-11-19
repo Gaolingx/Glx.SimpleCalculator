@@ -1,4 +1,32 @@
 {
   "title": "Basic",
-  "memory": "Memory"
+  "memory": "Memory",
+  "display": "Result",
+  "expression": "Expression",
+  "keypad": "Keypad",
+  "memoryIndicator": "Memory contains a value",
+  "previewNotice": "The browser preview does not calculate; run the desktop app.",
+  "keys": {
+    "percent": "Percent",
+    "clearEntry": "Clear entry",
+    "clearAll": "Clear all",
+    "backspace": "Backspace",
+    "reciprocal": "Reciprocal",
+    "square": "Square",
+    "sqrt": "Square root",
+    "divide": "Divide",
+    "multiply": "Multiply",
+    "subtract": "Subtract",
+    "add": "Add",
+    "equals": "Equals",
+    "toggleSign": "Toggle sign",
+    "decimal": "Decimal point"
+  },
+  "memoryKeys": {
+    "clear": "Clear memory",
+    "recall": "Recall memory",
+    "add": "Add to memory",
+    "subtract": "Subtract from memory",
+    "store": "Store in memory"
+  }
 }

@@ -27,3 +27,29 @@
 - `m0-dark-zh-basic.png`
 - `m0-dark-en-basic.png`
 - `m0-dark-en-settings.png`
+
+# T5 标准模式 UI — 2026-11-19
+
+- 方式：Edge headless CDP（精确 440×820，light/dark × zh-CN/en-US）+ Tauri dev / WebView2 CDP（真实 IPC、键盘、记忆、错误路径）。
+- 环境：同上；Tauri 窗口逻辑尺寸 441×821（设备缩放 175%）。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 布局 | 440×820 下 `scrollWidth/clientWidth = 440`、`scrollHeight/clientHeight = 820`；24 个按键全部在视口内（keypad 296–796），无横向溢出 |
+| 运算 | `2 + 3 × 4 =` → `14`；表达式行显示 `2 + 3 × 4 =` |
+| 分组 | `1000 × 1000 =` → `1,000,000`；关闭分组后即时取消分隔 |
+| 错误 | `1 ÷ 0` → 显示「不能除以零」，表达式行保留 `1 ÷ 0` |
+| CE | `2 + 3 CE` → 值 `0`、表达式 `2 +`；继续 `4 =` → `6` |
+| 记忆 | MS 后出现 `M` 指示；C 后按 MR 恢复 `500` |
+| 键盘 | 数字、运算符、Enter、Esc、Backspace、% 与 F9/R/Q/@ 均映射到命令；覆盖层打开时不拦截 |
+| IPC | 20 次 `calc_command` 均值 1.77 ms、p95 2.5 ms、最大 2.5 ms |
+| 控制台 | 0 error |
+| 测试 | 前端 55 项、Rust 92 项通过 |
+
+## 截图
+
+- `t5-light-zh-CN-basic.png`、`t5-light-en-US-basic.png`、`t5-dark-zh-CN-basic.png`、`t5-dark-en-US-basic.png`（440×820，1x）
+- `t5-tauri-verified.png`（真实 Tauri WebView2，`2 + 3 × 4 =` 结果 14，逻辑 441×821 @175%）
+

@@ -3,7 +3,15 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cx } from "./cx";
 import styles from "./SoftButton.module.css";
 
-export type SoftButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type SoftButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "danger"
+  | "number"
+  | "operator"
+  | "function"
+  | "warning";
 export type SoftButtonSize = "sm" | "md" | "lg" | "icon";
 
 export interface SoftButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

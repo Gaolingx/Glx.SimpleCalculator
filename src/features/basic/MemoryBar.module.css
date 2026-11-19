@@ -1,0 +1,14 @@
+.memoryBar {
+  display: flex;
+  flex: none;
+  gap: 0.25rem;
+}
+
+.memoryBar .memoryKey {
+  flex: 1;
+  min-height: 2rem;
+  padding: 0 0.5rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-label);
+  font-variant-numeric: tabular-nums;
+}

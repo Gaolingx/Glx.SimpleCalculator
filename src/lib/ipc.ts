@@ -3,7 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   DEFAULT_SETTINGS,
   normalizeSettings,
+  type AngleUnit,
   type AppSettings,
+  type Radix,
+  type WordSize,
 } from "./settings";
 
 export const ERROR_CODES = [
@@ -64,6 +67,194 @@ async function invokeCommand<T>(command: string, args?: Record<string, unknown>)
   } catch (error) {
     throw toIpcError(error);
   }
+}
+
+export const CALC_MODES = [
+  "basic",
+  "scientific",
+  "programmer",
+  "statistics",
+  "dateCalc",
+  "converter",
+  "worksheets",
+] as const;
+
+export type CalcMode = (typeof CALC_MODES)[number];
+
+export type UnaryOp =
+  | "sqrt"
+  | "square"
+  | "cube"
+  | "cubeRoot"
+  | "reciprocal"
+  | "factorial"
+  | "sin"
+  | "cos"
+  | "tan"
+  | "asin"
+  | "acos"
+  | "atan"
+  | "sinh"
+  | "cosh"
+  | "tanh"
+  | "asinh"
+  | "acosh"
+  | "atanh"
+  | "ln"
+  | "log10"
+  | "log2"
+  | "exp"
+  | "abs"
+  | "floor"
+  | "ceil"
+  | "round";
+
+export type BinaryOp =
+  | "add"
+  | "subtract"
+  | "multiply"
+  | "divide"
+  | "power"
+  | "modulo"
+  | "and"
+  | "or"
+  | "xor"
+  | "leftShift"
+  | "rightShift"
+  | "rotateLeft"
+  | "rotateRight";
+
+export type MemoryOp = "clear" | "recall" | "add" | "subtract" | "store";
+export type ConstantId = "pi" | "e";
+
+/** Mirrors `calc_core::command::CalcCommand` (tagged by `type`). */
+export type CalcCommand =
+  | { type: "digit"; digit: number }
+  | { type: "dot" }
+  | { type: "backspace" }
+  | { type: "clearAll" }
+  | { type: "clearEntry" }
+  | { type: "unary"; op: UnaryOp }
+  | { type: "binary"; op: BinaryOp }
+  | { type: "equals" }
+  | { type: "percent" }
+  | { type: "toggleSign" }
+  | { type: "memory"; op: MemoryOp }
+  | { type: "setAngleUnit"; unit: AngleUnit }
+  | { type: "setRadix"; radix: Radix }
+  | { type: "setWordSize"; size: WordSize }
+  | { type: "openGroup" }
+  | { type: "closeGroup" }
+  | { type: "constant"; id: ConstantId }
+  | { type: "toggleBit"; bit: number }
+  | { type: "setExpression"; text: string };
+
+export interface ErrorInfo {
+  code: ErrorCode;
+  args: string[];
+}
+
+export interface ProgrammerView {
+  radix: Radix;
+  wordSize: WordSize;
+  binary: string;
+  octal: string;
+  decimal: string;
+  hexadecimal: string;
+  bits: string;
+}
+
+/** Mirrors `calc_core::view::CalcView`. */
+export interface CalcView {
+  mode: CalcMode;
+  expression: string;
+  value: string;
+  memory: string | null;
+  programmer: ProgrammerView | null;
+  error: ErrorInfo | null;
+}
+
+export function emptyCalcView(mode: CalcMode = "basic"): CalcView {
+  return {
+    mode,
+    expression: "",
+    value: "",
+    memory: null,
+    programmer: null,
+    error: null,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isOneOf<T extends string>(value: unknown, options: readonly T[]): value is T {
+  return typeof value === "string" && (options as readonly string[]).includes(value);
+}
+
+export function isCalcMode(value: unknown): value is CalcMode {
+  return isOneOf(value, CALC_MODES);
+}
+
+function normalizeErrorInfo(value: unknown): ErrorInfo | null {
+  if (!isRecord(value) || !isErrorCode(value.code)) {
+    return null;
+  }
+  const args = Array.isArray(value.args)
+    ? value.args.filter((arg): arg is string => typeof arg === "string")
+    : [];
+  return { code: value.code, args };
+}
+
+function normalizeProgrammerView(value: unknown): ProgrammerView | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const radix = value.radix;
+  const wordSize = value.wordSize;
+  if (
+    !isOneOf(radix, ["binary", "octal", "decimal", "hexadecimal"] as const) ||
+    !isOneOf(wordSize, ["qword", "dword", "word", "byte"] as const)
+  ) {
+    return null;
+  }
+  const fields = ["binary", "octal", "decimal", "hexadecimal", "bits"] as const;
+  if (!fields.every((field) => typeof value[field] === "string")) {
+    return null;
+  }
+  return {
+    radix,
+    wordSize,
+    binary: value.binary as string,
+    octal: value.octal as string,
+    decimal: value.decimal as string,
+    hexadecimal: value.hexadecimal as string,
+    bits: value.bits as string,
+  };
+}
+
+/** Defensive normalization so a malformed payload cannot crash the page. */
+export function normalizeCalcView(value: unknown): CalcView {
+  if (!isRecord(value)) {
+    throw new IpcError("INTERNAL");
+  }
+  return {
+    mode: isCalcMode(value.mode) ? value.mode : "basic",
+    expression: typeof value.expression === "string" ? value.expression : "",
+    value: typeof value.value === "string" ? value.value : "",
+    memory: typeof value.memory === "string" ? value.memory : null,
+    programmer: normalizeProgrammerView(value.programmer),
+    error: normalizeErrorInfo(value.error),
+  };
+}
+
+export async function calcCommand(command: CalcCommand): Promise<CalcView> {
+  return normalizeCalcView(await invokeCommand<unknown>("calc_command", { cmd: command }));
+}
+
+export async function resetSession(mode: CalcMode = "basic"): Promise<CalcView> {
+  return normalizeCalcView(await invokeCommand<unknown>("session_reset", { mode }));
 }
 
 // Browser-only fallback so `npm run dev` stays usable without the Tauri shell.

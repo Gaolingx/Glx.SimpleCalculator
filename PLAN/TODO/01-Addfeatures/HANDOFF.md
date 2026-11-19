@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T4 完成**（2026-11-19）：`calc-core` 值/解析/基本引擎 + 记忆 + 82 项内核测试；下一步 T5 |
+| 当前进度 | **T5 完成**（2026-11-19）：标准模式 UI、`lib/format.ts`/`keyboard.ts`、Tauri `SessionMap` + `calc_command`；下一步 T6 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -136,6 +136,21 @@ setx PATH "%PATH%;E:\node"
 - 测试：82 项（lib 76 + 契约 5 + 黄金 1 组 6 用例）；覆盖优先级/括号/幂右结合、连算与重复 `=`、百分比三种语义、除零/溢出/定义域/语法/非法输入、记忆四操作、退格与 CE/C、错误恢复、粘贴表达式、负数补零与分组解析。黄金用例 `tests/golden/basic.json` 由引擎直接执行，后续 TS 侧可复用同一文件。
 - 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -D warnings` / `cargo test --workspace`（87 项）全绿；前端未修改。
 - 记忆为单槽（`CalcView.memory: Option<String>`），记忆面板列表属前端展示层；多值记忆栈留待 M2 按 UI 需要扩展。
+
+**T5 实测记录（2026-11-19）**
+
+- Tauri 适配：新增 `src-tauri/src/session.rs`，`SessionMap` 以窗口 label 为键持有 `Engine`，提供 `calc_command`（参数 `cmd`）与 `session_reset`（参数 `mode`）两个薄命令；窗口 `Destroyed` 时清理会话。`calc_command` 的业务错误仍通过 `CalcView.error` 返回，`Result` 仅保留协议级失败。单测覆盖窗口隔离、重置、销毁后重建。
+- 前端契约：`src/lib/ipc.ts` 增加 `CalcView/CalcCommand/ErrorInfo/ProgrammerView` 窄类型（禁止 `any`）、响应归一化与 `calcCommand/resetSession`；`src/stores/calc.ts` 按模式镜像最近视图，路由切换不丢显示（Rust 仍是唯一事实源）。
+- 标准页：`Display`（表达式行 + 主值 + 错误 + 自动缩字号 + 防抖 `aria-live` + M 指示）、`Keypad`（4 列 6 行，含 `% CE C ⌫ / 1/x x² √x ÷ / 7-9 / 4-6 / 1-3 / ± 0 . =`）、`MemoryBar`（MC/MR/M+/M−/MS；无记忆时 MC/MR 禁用）。`SoftButton` 扩展 `number/operator/function/warning` 分组变体；新增 `--color-warning-text` 令牌保证清除键文字在浅色主题下满足 AA。
+- 格式化：`lib/format.ts` 负责分组、16 位有效数字（第 17 位四舍五入、远离零）与 E 记法；指数 `≥16` 或 `≤−16` 转 E，避免长串数字溢出。输入中的 `0.`、`12.000` 等保留原样；表达式行把 `* / -` 显示为 `× ÷ −` 并本地化 `sqrt(`/`inv(`。
+- 键盘：数字、`.`/`,`、`+ - * /`、`Enter`/`=`、`Esc`/`Delete`、`Backspace`、`%`、`F9`（±）、`R`（1/x）、`Q`（x²）、`@`（√x）。带 Ctrl/Alt/Meta 的组合一律不拦截；设置/历史覆盖层打开时不响应；输入框聚焦时不响应。
+- CE 语义修正（T4 遗留）：CE 保留待处理表达式并显示 `0`（`2 + 3 CE` → 表达式 `2 +`、值 `0`）；无待处理表达式时清空显示与结果。新增 2 项引擎测试。
+- 预览模式：前端不复制算术；浏览器 `npm run dev` 下首次按键只显示「不执行计算」提示，真实计算必须走 Tauri，避免两套逻辑漂移。
+- 测试：Rust 92 项（calc-core 84 = lib 78 + 契约 5 + 黄金 1；shell 8 = 设置 5 + 会话 3）；前端 55 项（新增 `format` 12、`keyboard` 5、`BasicPage` 组件 7）。
+- 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 331.46 kB（gzip 104.18 kB）、CSS 25.43 kB（gzip 5.26 kB），仍在 250 kB gzip 预算内。
+- QA：Edge headless CDP 在 440×820 下输出 light/dark × zh-CN/en-US 四张截图，`scrollWidth/clientWidth = 440`、`scrollHeight/clientHeight = 820`，24 个按键全部位于视口内；Tauri dev + WebView2 CDP 实测 `2+3×4=14`、除零本地化错误、分组 `1,000,000`、CE 续算 `2+CE 4=6`、MS/MR，控制台 0 error；`calc_command` 20 次均延迟 1.77 ms、p95 2.5 ms（目标 <15 ms）。
+- 未纳入 T5：记忆面板（核心为单槽，需先做多槽记忆）、复制按钮/剪贴板（T7）、历史（T6）、小数位设置。复制按钮与右键菜单由 T7 在 `Display` / `Keypad` 上接入。
+
 
 ### 1.4 参考截图 → 布局结论
 
@@ -291,7 +306,7 @@ Glx.SimpleCalculator/
 
 | 模式 | 数值类型 | 显示规则 | 错误边界 |
 |---|---|---|---|
-| 基本 / 汇率 | `rust_decimal`（28–29 位有效数字） | 最多 16 位有效数字；汇率结果按 6 位有效数字显示 | 超出 Decimal 范围 → `Overflow` |
+| 基本 / 汇率 | `rust_decimal`（28–29 位有效数字） | 最多 16 位有效数字；指数 ≥16 或 ≤−16 用 E 记法；汇率结果按 6 位有效数字显示 | 超出 Decimal 范围 → `Overflow` |
 | 工作表（金额） | `rust_decimal`（整数指数 `powi`） | 中间值保留 8 位小数，最终金额 `round_dp_with_strategy(2, MidpointAwayFromZero)` | 期限/利率非法 → `InvalidInput` |
 | 工作表（mpg 等非线性辅助） | `f64` | 结果按 4 位有效数字显示 | 仅展示用，不参与金额累计 |
 | 科学型 | `f64`（三角/对数/幂） | 12–15 位有效数字；`|x|≥1e12` 或 `<1e-9` 用 E 记法；去尾零 | 定义域错误 → `DomainError`；`n!` 限 0–170 |
@@ -348,6 +363,8 @@ pub enum CalcCommand {
 ```
 
 其余命令：`session_reset(mode)`、`convert_unit`、`currency_status/refresh`、`date_diff/date_add`、`worksheet_compute`、`stats_compute`、`history_list/add/delete/clear`、`settings_get/set/reset`、`app_info`。
+
+> T5 已实现 `calc_command` 与 `session_reset`。业务错误走 `CalcView.error`；`Result<_, ErrorInfo>` 仅表示协议级失败（当前恒为 `Ok`），前端仍按错误码统一处理。
 
 契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
@@ -509,6 +526,7 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 | `--color-accent`（blossom） | `#ec4899` | `#f472b6` |
 | `--color-success` | `#10b981` | `#34d399` |
 | `--color-warning` | `#f59e0b` | `#fbbf24` |
+| `--color-warning-text`（清除键文字，AA） | `#b45309` | `#fbbf24` |
 | `--color-danger`（设计稿补充） | `#ef4444` | `#f87171` |
 | `--shadow-card` | `0 12px 32px rgba(148,163,184,.25)` | `0 12px 32px rgba(0,0,0,.45)` |
 | `--shadow-card-hover` | `0 24px 48px rgba(99,102,241,.20)` | `0 24px 48px rgba(99,102,241,.16)` |
@@ -576,6 +594,7 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 | `Esc` / `Del` | C（清除全部）；`Esc` 同时关闭弹层 |
 | `Backspace` | ⌫ |
 | `%` | 百分比 |
+| `F9` / `R` / `Q` / `@` | `±` / `1/x` / `x²` / `√x`（Windows 计算器快捷方式） |
 | `Ctrl+C` / `Ctrl+V` | 复制当前原始值 / 粘贴 |
 | `Ctrl+H` | 历史抽屉 |
 | `Ctrl+1..5`（P2） | 切换模式 |
@@ -630,7 +649,7 @@ src/i18n/locales/en-US/...（同构）
 | T2 | 设计系统 + i18n + 主题 | M0 | T1 | `tokens.css`（双主题）、字体、`SoftButton/Card/Input/Tooltip/Toast`、i18n 初始化与 zh/en 骨架 | 两主题/两语言截图；`check:i18n` | done |
 | T3 | 窗口外壳 + 导航 + 设置 | M0 | T2 | `TitleBar`/`CaptionButtons`/`NavRail`/路由（7 页占位）、设置页与 store 读写、Spike A/B | 拖拽/缩放/关闭；重启保留设置；DPI 100/150 | done |
 | T4 | 核心 v1：值/解析/基本引擎 | M1 | T0 | `value/parser/engine/ops::basic`、错误、记忆、≥60 单测 | `cargo test -p calc-core` | done |
-| T5 | 标准模式 UI + 格式化 + 键盘 | M2 | T3,T4 | 标准页、`Display`、`Keypad`、`lib/format.ts`（分组）、键盘映射 | 手工用例表；Vitest 格式化 | pending |
+| T5 | 标准模式 UI + 格式化 + 键盘 | M2 | T3,T4 | 标准页、`Display`、`Keypad`、`lib/format.ts`（分组）、键盘映射 | 手工用例表；Vitest 格式化 | done |
 | T6 | 历史记录 | M2 | T4,T5 | 存储命令、历史抽屉、恢复/删除/清空/复制 | 重启保留；上限；两语言 | pending |
 | T7 | 剪贴板 + 校验 + 右键菜单 | M2 | T5 | `lib/clipboard.ts`、粘贴清洗、`SoftMenu`、错误提示 | 非法粘贴；0x/0b；Ctrl+C/V | pending |
 | T8 | 科学型 | M3 | T4 | `ops::scientific`、科学键盘、角度制、F-E、定义域错误 | sin/cos/ln/阶乘/幂单测；RAD/DEG | pending |
@@ -699,14 +718,14 @@ npm run typecheck && npm run test
 ### M2 标准模式 UI + 历史 + 设置（2 人日）
 
 **任务**
-- [ ] `Display`（表达式行 + 主值 + 自动缩字号 + 分组渲染 + 复制按钮）
-- [ ] `Keypad`（4 列网格，对齐截图；hover/active 动效）
-- [ ] 记忆行 + 记忆面板
+- [x] `Display`（表达式行 + 主值 + 自动缩字号 + 分组渲染 + 防抖 `aria-live`；复制按钮随 T7）
+- [x] `Keypad`（4 列网格，对齐截图；hover/active 动效）
+- [x] 记忆行（MC/MR/M+/M−/MS，单槽）；记忆面板需多槽记忆，未纳入本次迭代
 - [ ] 历史抽屉（按日期分组、点击恢复、删除、清空、复制、空状态）
 - [ ] 剪贴板：复制原始值、粘贴清洗、无效提示
 - [ ] 设置面板：主题/语言/分组开关/小数位/历史开关（`SoftSwitch`、`SoftSegmentedControl`）
-- [ ] 快捷键全套 + 焦点管理
-- [ ] Vitest：格式化、解析清洗、store 行为
+- [x] 基本模式快捷键 + 覆盖层/输入框焦点门控（复制粘贴与 F1 说明随 T7/T16）
+- [x] Vitest：格式化、键盘映射、BasicPage 组件（粘贴清洗随 T7）
 
 **验收**
 - 两主题、两语言下布局无溢出；100%/150% 缩放正常
@@ -1036,6 +1055,8 @@ rm -rf src-tauri/target/release/bundle
 | 15 | 1.3 / 6.0 T1 | `typescript-eslint` 不支持 TS 7，原定 ESLint 无法落地 | 改用 `oxlint@1.94`；1.3 记录偏差与回溯条件 |
 | 16 | 4.2 | light 文字 muted `#64748b` 在 12px 下对比度仅 4.34:1 | 改为 `#5c6b80`（4.95:1）；dark 保持 `#94a3b8`（约 7.3:1） |
 | 17 | 3.9 / T3 | capabilities 仅列插件权限，未说明自绘标题栏需要窗口写权限 | T3 实测补 `core:window:allow-start-dragging/minimize/toggle-maximize/close`；`core:default` 仅含读取与 drag-region 双击最大化 |
+| 18 | 4.7 / T4 | CE 后待处理表达式的显示语义未定义 | T5 明确：有待处理表达式时 CE 保留表达式并显示 `0`；无待处理表达式时清空显示与结果（附引擎测试） |
+| 19 | 3.5 / T5 | 基本模式的 E 记法阈值未定义 | 基本模式最多 16 位有效数字；指数 ≥16 或 ≤−16 转 E 记法，阈值由 `lib/format.ts` 参数化 |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 
@@ -1067,4 +1088,4 @@ npm: react 19.3.1, vite 8.3.8, typescript 7.0.2, zustand 5.1.0,
 |---|---|---|---|
 | A | `decorations:false` 下拖拽 / 双击最大化 / 缩放 / 阴影 / Snap | **通过**。窗口具备 `WS_THICKFRAME/MINBOX/MAXBOX`，双击最大化/还原、标题栏拖拽、顶部 Snap、边缘缩放、自绘按钮均正常；需在 capabilities 补 `start-dragging/minimize/toggle-maximize/close`，`core:default` 不含窗口写操作。 | 2026-11-19 |
 | B | Server 2022 下 Acrylic/透明与 DPI 清晰度 | **通过（纯色降级）**。Build 20348 无 Mica；窗口 opaque，不启用 Acrylic。设备模拟 100%/125%/150%/175%/200% 布局无溢出，175% 实机渲染清晰。 | 2026-11-19 |
-| C | IPC 单次命令延迟（20 次按键均值/p95） | 待验证（T4 实现 `calc_command` 后测量） | — |
+| C | IPC 单次命令延迟（20 次按键均值/p95） | **通过**。T5 在 Tauri dev + WebView2 CDP 实测 20 次 `calc_command`：均值 1.77 ms、p95 2.5 ms（目标 <15 ms）。 | 2026-11-19 |

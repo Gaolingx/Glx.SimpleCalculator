@@ -19,6 +19,7 @@
   --color-success-soft: rgba(16, 185, 129, 0.12);
   --color-warning: #f59e0b;
   --color-warning-soft: rgba(245, 158, 11, 0.12);
+  --color-warning-text: #b45309;
   --color-danger: #ef4444;
   --color-danger-soft: rgba(239, 68, 68, 0.1);
 
@@ -95,6 +96,7 @@
   --color-success-soft: rgba(52, 211, 153, 0.16);
   --color-warning: #fbbf24;
   --color-warning-soft: rgba(251, 191, 36, 0.16);
+  --color-warning-text: #fbbf24;
   --color-danger: #f87171;
   --color-danger-soft: rgba(248, 113, 113, 0.16);
 
@@ -129,6 +131,7 @@
     --color-success-soft: rgba(52, 211, 153, 0.16);
     --color-warning: #fbbf24;
     --color-warning-soft: rgba(251, 191, 36, 0.16);
+    --color-warning-text: #fbbf24;
     --color-danger: #f87171;
     --color-danger-soft: rgba(248, 113, 113, 0.16);
 

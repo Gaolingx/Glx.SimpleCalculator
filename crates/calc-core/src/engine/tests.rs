@@ -122,6 +122,36 @@ fn clear_entry_drops_current_entry() {
 }
 
 #[test]
+fn clear_entry_keeps_the_pending_expression() {
+    let mut engine = Engine::default();
+    type_text(&mut engine, "2");
+    binary(&mut engine, BinaryOp::Add);
+    type_text(&mut engine, "3");
+
+    let view = engine.apply(CalcCommand::ClearEntry);
+    assert_eq!(view.expression, "2 +");
+    assert_eq!(view.value, "0");
+
+    type_text(&mut engine, "4");
+    let view = engine.apply(CalcCommand::Equals);
+    assert_eq!(view.expression, "2 + 4 =");
+    assert_eq!(view.value, "6");
+}
+
+#[test]
+fn clear_entry_after_equals_clears_the_result() {
+    let mut engine = Engine::default();
+    type_text(&mut engine, "4");
+    binary(&mut engine, BinaryOp::Multiply);
+    type_text(&mut engine, "5");
+    engine.apply(CalcCommand::Equals);
+
+    let view = engine.apply(CalcCommand::ClearEntry);
+    assert_eq!(view.value, "");
+    assert_eq!(view.expression, "");
+}
+
+#[test]
 fn clear_all_resets_session_but_keeps_memory() {
     let mut engine = Engine::default();
     type_text(&mut engine, "5");

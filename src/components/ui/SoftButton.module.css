@@ -116,6 +116,44 @@
   transform: scale(0.96);
 }
 
+/* Calculator keypad groups (HANDOFF §4.4). */
+.number {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.operator {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.function {
+  background: var(--color-surface-3);
+  color: var(--color-text);
+}
+
+.warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning-text);
+}
+
+.number:hover:not(:disabled),
+.operator:hover:not(:disabled),
+.function:hover:not(:disabled),
+.warning:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.number:active:not(:disabled),
+.operator:active:not(:disabled),
+.function:active:not(:disabled),
+.warning:active:not(:disabled) {
+  transform: scale(0.96);
+  box-shadow: var(--shadow-button-pressed);
+}
+
 .button:disabled {
   opacity: 0.4;
   cursor: not-allowed;

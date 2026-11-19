@@ -20,3 +20,26 @@ export {
 export type { AngleUnit, AppSettings, Radix, WordSize } from "./settings";
 export { ERROR_CODES, IpcError, isTauriRuntime, toIpcError } from "./ipc";
 export type { ErrorCode } from "./ipc";
+export {
+  CALC_MODES,
+  calcCommand,
+  emptyCalcView,
+  isCalcMode,
+  normalizeCalcView,
+  resetSession,
+} from "./ipc";
+export type {
+  BinaryOp,
+  CalcCommand,
+  CalcMode,
+  CalcView,
+  ConstantId,
+  ErrorInfo,
+  MemoryOp,
+  ProgrammerView,
+  UnaryOp,
+} from "./ipc";
+export { formatExpression, formatNumber, groupInteger } from "./format";
+export type { FormatNumberOptions } from "./format";
+export { commandForKeyboard, isEditableTarget } from "./keyboard";
+export type { KeyInput } from "./keyboard";

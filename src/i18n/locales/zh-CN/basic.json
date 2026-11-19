@@ -1,4 +1,32 @@
 {
   "title": "基本",
-  "memory": "记忆"
+  "memory": "记忆",
+  "display": "计算结果",
+  "expression": "表达式",
+  "keypad": "数字键盘",
+  "memoryIndicator": "记忆中已存储数值",
+  "previewNotice": "浏览器预览不执行计算，请使用桌面应用。",
+  "keys": {
+    "percent": "百分比",
+    "clearEntry": "清除当前输入",
+    "clearAll": "全部清除",
+    "backspace": "退格",
+    "reciprocal": "倒数",
+    "square": "平方",
+    "sqrt": "平方根",
+    "divide": "除",
+    "multiply": "乘",
+    "subtract": "减",
+    "add": "加",
+    "equals": "等于",
+    "toggleSign": "正负号",
+    "decimal": "小数点"
+  },
+  "memoryKeys": {
+    "clear": "清除记忆",
+    "recall": "读取记忆",
+    "add": "记忆加",
+    "subtract": "记忆减",
+    "store": "存储记忆"
+  }
 }
