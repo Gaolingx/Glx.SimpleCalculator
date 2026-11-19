@@ -25,7 +25,7 @@
 }
 
 .root:hover .bubble,
-.root:focus-within .bubble {
+.root:has(> :focus-visible) .bubble {
   opacity: 1;
   visibility: visible;
   transition-delay: 400ms, 400ms, 0s;
@@ -38,7 +38,7 @@
 }
 
 .root:hover .top,
-.root:focus-within .top {
+.root:has(> :focus-visible) .top {
   transform: translate(-50%, 0);
 }
 
@@ -49,7 +49,7 @@
 }
 
 .root:hover .bottom,
-.root:focus-within .bottom {
+.root:has(> :focus-visible) .bottom {
   transform: translate(-50%, 0);
 }
 
@@ -60,7 +60,7 @@
 }
 
 .root:hover .left,
-.root:focus-within .left {
+.root:has(> :focus-visible) .left {
   transform: translate(0, -50%);
 }
 
@@ -71,6 +71,6 @@
 }
 
 .root:hover .right,
-.root:focus-within .right {
+.root:has(> :focus-visible) .right {
   transform: translate(0, -50%);
 }
