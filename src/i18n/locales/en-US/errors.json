@@ -1,0 +1,13 @@
+{
+  "DIVIDE_BY_ZERO": "Cannot divide by zero",
+  "OVERFLOW": "Number is out of range",
+  "INVALID_INPUT": "Invalid input",
+  "DOMAIN_ERROR": "Value is outside the function domain",
+  "SYNTAX": "Expression syntax error",
+  "UNSUPPORTED": "This operation is not supported",
+  "CURRENCY_OFFLINE": "Exchange rate data is unavailable",
+  "UNKNOWN_UNIT": "Unknown unit",
+  "STORAGE_ERROR": "Storage access failed",
+  "NETWORK_ERROR": "Network request failed",
+  "INTERNAL": "Internal error"
+}

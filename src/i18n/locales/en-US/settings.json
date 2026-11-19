@@ -1,0 +1,10 @@
+{
+  "title": "Settings",
+  "appearance": "Appearance",
+  "general": "General",
+  "grouping": "Digit grouping",
+  "groupingHint": "Show large numbers as 1,000",
+  "historyLimit": "History limit",
+  "historyLimitHint": "100 to 1000 entries",
+  "resetDefaults": "Restore default settings"
+}

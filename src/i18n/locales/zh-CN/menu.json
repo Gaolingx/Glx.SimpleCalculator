@@ -1,0 +1,14 @@
+{
+  "nav": {
+    "basic": "基本",
+    "scientific": "科学型",
+    "programmer": "程序员",
+    "statistics": "统计型",
+    "datecalc": "日期计算",
+    "converter": "单位转换",
+    "worksheets": "工作表"
+  },
+  "history": "历史",
+  "settings": "设置",
+  "devBadge": "dev"
+}

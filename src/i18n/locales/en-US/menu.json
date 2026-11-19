@@ -1,0 +1,14 @@
+{
+  "nav": {
+    "basic": "Basic",
+    "scientific": "Scientific",
+    "programmer": "Programmer",
+    "statistics": "Statistics",
+    "datecalc": "Date calculation",
+    "converter": "Converter",
+    "worksheets": "Worksheets"
+  },
+  "history": "History",
+  "settings": "Settings",
+  "devBadge": "dev"
+}

@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T1 完成**（2026-11-19）：Tauri 2 + React 19 脚手架、插件与最小权限、CI、依赖锁定；下一步 T2 |
+| 当前进度 | **T2 完成**（2026-11-19）：设计令牌/双主题、基础控件、本地 Inter、i18n 12×2 骨架与 `check:i18n`；下一步 T3 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -101,6 +101,17 @@ setx PATH "%PATH%;E:\node"
 - **ESLint 偏差**：`typescript-eslint@8.73` 的 peer 范围仍为 `typescript >=4.8.4 <6.1.0`，与最新 `typescript@7.0.2` 冲突。因此 lint 门禁改用 `oxlint@1.94`（原生 TS 解析，含 react/typescript 插件），脚本名保持 `npm run lint`；待 typescript-eslint 支持 TS 7 后可直接替换，不影响其他门禁。
 - 图标：`src-tauri/icons/app-icon.png` 为程序化生成的占位源图（紫底白色等号），经 `tauri icon` 展开为多尺寸 PNG/ICO/ICNS；`android/`、`ios/` 产物已删除（本迭代不做移动端，见 2.2）。
 - 本地验证：`npm run typecheck` / `npm run lint` / `npm run test` / `npm run build`、`cargo fmt --check` / `cargo clippy -D warnings` / `cargo test --workspace` 全部通过；前端产物 JS 219.7 kB（gzip 68.7 kB），低于 250 kB 预算。
+
+**T2 实测记录（2026-11-19）**
+
+- 依赖实际解析：`i18next@27.2.1`、`react-i18next@18.0.2`。
+- 字体：`src/assets/fonts/inter-latin-var.woff2`（Google Fonts v20 latin 子集，48.25 kB，可变字重 400–700），`@font-face` 自托管，CSP 不放开远程字体。
+- 主题：`src/styles/tokens.css` 全量令牌 + 深浅两套值，`prefers-color-scheme` 作为首屏兜底；启动时 `src/lib/theme.ts` 依据 `localStorage["glx.theme"]` 在 React 渲染前写入 `<html data-theme>`，避免白闪。存储键暂由前端管理，T3 迁移到 Rust 设置。
+- i18n：12 个命名空间 × zh-CN/en-US，静态资源导入；语言键 `glx.language` 与 `<html lang>` 同步；`scripts/check-i18n.mjs` 校验文件清单、键集合、空值与 `{{placeholder}}`，已接入 `npm run check:i18n` 与 CI。
+- 控件：`SoftButton / SoftCard / SoftInput / SoftTooltip / SoftToast`（CSS Modules；覆盖 hover/active/focus-visible/disabled/loading/error，tooltip 400ms 延迟、toast 3s 自动关闭）。
+- 临时画廊页 `src/features/dev/GalleryPage.tsx` 用于 T2 视觉验收，T3 接入路由时移除。
+- 构建产物：JS 289.68 kB（gzip 91.86 kB）、CSS 14.12 kB（gzip 3.42 kB）、字体 48.25 kB；按 §8 的 gzip 预算（250 kB）通过。i18next 使 raw 体积高于 T1，门禁口径统一按 gzip。
+- 视觉检查：Edge headless 440 宽，light/dark × zh/en；tooltip 聚焦显示、toast 四态与关闭均正常，页面无未翻译的裸键。截图仅作过程验证，未入库。
 
 ### 1.4 参考截图 → 布局结论
 
@@ -464,7 +475,7 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 | `--color-surface-2` | `#f8fafc` | `#1f2431` |
 | `--color-surface-3` | `#eef2f7` | `#262c3b` |
 | `--color-text` | `#1f2937` | `#e6eaf2` |
-| `--color-text-muted` | `#64748b` | `#94a3b8` |
+| `--color-text-muted` | `#5c6b80` | `#94a3b8` |
 | `--color-primary` | `#6366f1` | `#6366f1` |
 | `--color-primary-fill`（按钮/选中填充） | `#4f46e5`（白字满足 AA） | `#4f46e5`（白字满足 AA） |
 | `--color-primary-hover` | `#4338ca` | `#5850ec` |
@@ -482,7 +493,8 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 | `--radius-btn` / `--radius-card` | 16 / 24 | 16 / 24 |
 | 间距 | 8 的倍数；按键 gap 12 | 同 |
 
-- 切换方式：`<html data-theme="light|dark">` + `prefers-color-scheme` 作为 `system` 解析结果；启动前内联脚本写入主题，避免白闪。
+- 切换方式：`<html data-theme="light|dark">` + `prefers-color-scheme` 作为 `system` 解析结果；启动时在 React 渲染前由 `src/lib/theme.ts` 写入 `data-theme`，首屏由 CSS 媒体查询兜底，避免白闪（CSP 不允许内联脚本）。
+- 实现偏差：light 的 `--color-text-muted` 采用 `#5c6b80`（对 `#f1f5f9` 为 4.95:1）；设计稿 `#64748b` 仅 4.34:1，12px 文案不满足 AA，dark 保持 `#94a3b8`（约 7.3:1）。
 - 遵循设计稿 Do/Don't：无 1px 硬描边、阴影带色相、低饱和、hover 上浮、按下内凹。**深浅两套都必须过 WCAG AA**（正文 ≥4.5:1，大字号 ≥3:1）。
 - 动效：hover 200–300ms，卡片位移 500ms，按下缩放 0.96–0.97；`prefers-reduced-motion` 全部降级为无位移、无缩放。
 - 背景：默认纯色；可选「柔和背景」用极低对比径向渐变；**不做窗口透明/Acrylic 作为默认值**（M0 验证后再定）。
@@ -591,7 +603,7 @@ src/i18n/locales/en-US/...（同构）
 |---|---|---|---|---|---|---|
 | T0 | 环境与模块边界冻结 | M0 | — | PATH 约定、根 `Cargo.toml` workspace、`crates/calc-core` 契约骨架（`error/view/mode/command`）、`.gitignore`、本文档 3.10/3.11 | `cargo test -p calc-core`；`cargo check --workspace` | done |
 | T1 | Tauri + React 脚手架 + CI | M0 | T0 | `src-tauri` 配置/插件/权限、Vite/TS/oxlint（见 1.3）、`package-lock.json`、`.github/workflows/ci.yml` | `npm install`；`npm run tauri dev`；CI 绿 | done |
-| T2 | 设计系统 + i18n + 主题 | M0 | T1 | `tokens.css`（双主题）、字体、`SoftButton/Card/Input/Tooltip/Toast`、i18n 初始化与 zh/en 骨架 | 两主题/两语言截图；`check:i18n` | pending |
+| T2 | 设计系统 + i18n + 主题 | M0 | T1 | `tokens.css`（双主题）、字体、`SoftButton/Card/Input/Tooltip/Toast`、i18n 初始化与 zh/en 骨架 | 两主题/两语言截图；`check:i18n` | done |
 | T3 | 窗口外壳 + 导航 + 设置 | M0 | T2 | `TitleBar`/`CaptionButtons`/`NavRail`/路由（7 页占位）、设置页与 store 读写、Spike A/B | 拖拽/缩放/关闭；重启保留设置；DPI 100/150 | pending |
 | T4 | 核心 v1：值/解析/基本引擎 | M1 | T0 | `value/parser/engine/ops::basic`、错误、记忆、≥60 单测 | `cargo test -p calc-core` | pending |
 | T5 | 标准模式 UI + 格式化 + 键盘 | M2 | T3,T4 | 标准页、`Display`、`Keypad`、`lib/format.ts`（分组）、键盘映射 | 手工用例表；Vitest 格式化 | pending |
@@ -624,7 +636,7 @@ src/i18n/locales/en-US/...（同构）
 - [x] T0：配置 PATH（`export PATH="/e/node:$PATH"` / `setx PATH "%PATH%;E:\node"`），验证 `node -v`、`npm -v`
 - [x] T0：根 `Cargo.toml` workspace（先含 `crates/calc-core`，T1 加入 `src-tauri`）+ 契约骨架 + `.gitignore`
 - [x] T1：初始化 Tauri 2 + React 19 + TS + Vite；插件与 capabilities 最小权限；CI
-- [ ] T2：`tokens.css`（双主题）+ 基础控件 + 字体本地化 + i18n 骨架
+- [x] T2：`tokens.css`（双主题）+ 基础控件 + 字体本地化 + i18n 骨架
 - [ ] T3：窗口 440×820、最小 380×640、`decorations:false`、`transparent:false`；`TitleBar` + `NavRail` + 路由占位（7 个主页面 + 2 个覆盖层，见 2.0）
 - [ ] T3：设置页与 store 读写（主题/语言/分组/角度制/字宽/进制/历史开关）
 - [ ] **Spike A（T3）**：无边框窗口拖拽/双击最大化/缩放/阴影/Snap；结论写回附录 B
@@ -787,6 +799,7 @@ npm run typecheck && npm run test
 | 任务 | 新增/修改的测试 | 路径 | 判定 |
 |---|---|---|---|
 | T0 | IPC 契约 serde 测试（tag、camelCase、错误码字符串） | `crates/calc-core/tests/contract.rs` | 序列化 JSON 与 TS 类型逐字段一致 |
+| T2 | i18n 键集合/占位符；主题解析与存储容错 | `scripts/check-i18n.mjs`、`src/lib/theme.test.ts`、`src/i18n/i18n.test.ts` | 两语言键一致；system 解析与异常存储降级正确 |
 | T4 | 值/解析/引擎单测 + 黄金用例 | `crates/calc-core/src/**/#[cfg(test)]`、`tests/golden/basic.json` | ≥60 例；错误码稳定 |
 | T5 | 格式化（分组/有效数字/E 记法）与按键事件 | `src/lib/format.test.ts`、`src/features/basic/*.test.tsx` | 分组开关切换；Ctrl+C/V |
 | T6 | 历史上限/排序/持久化/恢复 | `src-tauri/tests/history.rs`（或 storage 单测） | 重启保留；超限淘汰 |
@@ -997,6 +1010,7 @@ rm -rf src-tauri/target/release/bundle
 | 13 | 4.7 / 6 | 错误态恢复规则粗略 | 明确数字/退格恢复、运算符先清除、Esc/C 立即清除 |
 | 14 | 3.10 / 7 | 模块职责、测试归属、清理归属分散 | 增补 3.10 边界、7.0 测试归属、第 12 节收尾 |
 | 15 | 1.3 / 6.0 T1 | `typescript-eslint` 不支持 TS 7，原定 ESLint 无法落地 | 改用 `oxlint@1.94`；1.3 记录偏差与回溯条件 |
+| 16 | 4.2 | light 文字 muted `#64748b` 在 12px 下对比度仅 4.34:1 | 改为 `#5c6b80`（4.95:1）；dark 保持 `#94a3b8`（约 7.3:1） |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 

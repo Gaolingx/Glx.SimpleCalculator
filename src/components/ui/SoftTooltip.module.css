@@ -1,0 +1,76 @@
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+.bubble {
+  position: absolute;
+  z-index: var(--z-tooltip);
+  max-width: 16rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  white-space: nowrap;
+  box-shadow: var(--shadow-card);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--duration-fast) var(--ease-soft),
+    transform var(--duration-fast) var(--ease-soft),
+    visibility 0s linear var(--duration-fast);
+}
+
+.root:hover .bubble,
+.root:focus-within .bubble {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 400ms, 400ms, 0s;
+}
+
+.top {
+  bottom: calc(100% + 0.5rem);
+  left: 50%;
+  transform: translate(-50%, 0.25rem);
+}
+
+.root:hover .top,
+.root:focus-within .top {
+  transform: translate(-50%, 0);
+}
+
+.bottom {
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  transform: translate(-50%, -0.25rem);
+}
+
+.root:hover .bottom,
+.root:focus-within .bottom {
+  transform: translate(-50%, 0);
+}
+
+.left {
+  right: calc(100% + 0.5rem);
+  top: 50%;
+  transform: translate(0.25rem, -50%);
+}
+
+.root:hover .left,
+.root:focus-within .left {
+  transform: translate(0, -50%);
+}
+
+.right {
+  left: calc(100% + 0.5rem);
+  top: 50%;
+  transform: translate(-0.25rem, -50%);
+}
+
+.root:hover .right,
+.root:focus-within .right {
+  transform: translate(0, -50%);
+}

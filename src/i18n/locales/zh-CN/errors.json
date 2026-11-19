@@ -1,0 +1,13 @@
+{
+  "DIVIDE_BY_ZERO": "不能除以零",
+  "OVERFLOW": "数值超出范围",
+  "INVALID_INPUT": "输入无效",
+  "DOMAIN_ERROR": "超出定义域",
+  "SYNTAX": "表达式语法错误",
+  "UNSUPPORTED": "暂不支持该运算",
+  "CURRENCY_OFFLINE": "汇率数据不可用",
+  "UNKNOWN_UNIT": "未知单位",
+  "STORAGE_ERROR": "存储读写失败",
+  "NETWORK_ERROR": "网络请求失败",
+  "INTERNAL": "内部错误"
+}

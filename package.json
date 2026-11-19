@@ -15,12 +15,15 @@
     "lint": "oxlint src vite.config.ts",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
     "@tauri-apps/api": "~2.11.1",
+    "i18next": "^27.2.1",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "react-i18next": "^18.0.2"
   },
   "devDependencies": {
     "@tauri-apps/cli": "~2.11.5",

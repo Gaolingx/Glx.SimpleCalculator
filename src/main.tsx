@@ -2,14 +2,29 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import App from "./App";
+import { initI18n } from "./i18n";
+import { applyTheme, readStoredTheme } from "./lib";
+import "./styles/fonts.css";
+import "./styles/tokens.css";
+import "./styles/base.css";
 
 const container = document.getElementById("root");
 if (!container) {
   throw new Error("root element is missing");
 }
+const root = createRoot(container);
 
-createRoot(container).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+async function bootstrap(): Promise<void> {
+  applyTheme(readStoredTheme());
+  await initI18n();
+  root.render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+}
+
+void bootstrap().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  container.textContent = message;
+});

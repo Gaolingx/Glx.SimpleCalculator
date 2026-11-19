@@ -1,0 +1,10 @@
+{
+  "title": "设置",
+  "appearance": "外观",
+  "general": "通用",
+  "grouping": "数字分组",
+  "groupingHint": "以 1,000 的形式显示大数",
+  "historyLimit": "历史上限",
+  "historyLimitHint": "100 到 1000 条",
+  "resetDefaults": "恢复默认设置"
+}
