@@ -6,6 +6,7 @@
 //! - IPC contracts mirror `calc-core::{view,error,command}`.
 
 mod clipboard;
+pub mod currency;
 mod history;
 mod session;
 mod settings;
@@ -26,6 +27,14 @@ pub fn run() {
             app.manage(settings::SettingsState::new(loaded));
             app.manage(history::HistoryState::load(app.handle(), history_limit));
             app.manage(session::SessionMap::new());
+            app.manage(currency::CurrencyState::load(app.handle()));
+
+            // Refresh the cached ECB snapshot in the background when it is
+            // missing or older than 24h; the UI stays usable meanwhile.
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = currency::refresh_if_stale(&handle).await;
+            });
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -50,6 +59,8 @@ pub fn run() {
             clipboard::clipboard_read,
             units::units_catalog,
             units::convert_unit,
+            currency::currency_status,
+            currency::currency_refresh,
         ])
         .run(tauri::generate_context!())
         .expect("failed to launch Glx Calculator");

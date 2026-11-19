@@ -33,6 +33,35 @@
   flex: none;
 }
 
+.rateBar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2rem;
+  padding: 0 0.25rem;
+}
+
+.rateSource {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rateWarning {
+  margin: 0;
+  padding: 0 0.25rem;
+  color: var(--color-warning-text);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  text-align: right;
+}
+
 .panel {
   display: flex;
   flex: none;

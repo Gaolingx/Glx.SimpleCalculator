@@ -13,9 +13,12 @@ import { formatNumber } from "../../lib/format";
 import {
   convertUnit,
   copyText,
+  fetchCurrencyStatus,
   fetchUnitCatalog,
   isTauriRuntime,
+  refreshCurrency,
   toIpcError,
+  type CurrencyStatus,
   type ErrorCode,
   type UnitCatalog,
   type UnitCategory,
@@ -50,6 +53,9 @@ export function ConverterPage() {
   const [to, setTo] = useState("m");
   const [input, setInput] = useState("1");
   const [conversion, setConversion] = useState<Conversion | null>(null);
+  const [currencyStatus, setCurrencyStatus] = useState<CurrencyStatus | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [ratesVersion, setRatesVersion] = useState(0);
   const requestId = useRef(0);
 
   useEffect(() => {
@@ -86,6 +92,27 @@ export function ConverterPage() {
       cancelled = true;
     };
   }, [preview, reloadToken]);
+
+  useEffect(() => {
+    if (preview) {
+      return undefined;
+    }
+    let cancelled = false;
+    fetchCurrencyStatus()
+      .then((next) => {
+        if (!cancelled) {
+          setCurrencyStatus(next);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCurrencyStatus(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [preview]);
 
   const categories = catalog?.categories;
   const activeCategory = categories?.find((entry) => entry.id === category);
@@ -125,7 +152,7 @@ export function ConverterPage() {
         });
     }, 120);
     return () => window.clearTimeout(timer);
-  }, [preview, activeCategory, input, category, from, to]);
+  }, [preview, activeCategory, input, category, from, to, ratesVersion]);
 
   const requestKey =
     activeCategory && from && to ? `${category}|${from}|${to}|${input.trim()}` : "";
@@ -189,6 +216,35 @@ export function ConverterPage() {
     setTo(from);
   };
 
+  const refreshRates = () => {
+    if (refreshing) {
+      return;
+    }
+    setRefreshing(true);
+    refreshCurrency()
+      .then((next) => {
+        setCurrencyStatus(next);
+        setRatesVersion((version) => version + 1);
+      })
+      .catch(() => {
+        setCurrencyStatus((previous) =>
+          previous ? { ...previous, refreshFailed: true } : previous,
+        );
+      })
+      .finally(() => setRefreshing(false));
+  };
+
+  const rateSourceText = !currencyStatus
+    ? t("units:ratesLoading")
+    : currencyStatus.available
+      ? currencyStatus.date
+        ? t("units:rateSource", {
+            source: currencyStatus.source,
+            date: currencyStatus.date,
+          })
+        : t("units:rateSourceNoDate", { source: currencyStatus.source })
+      : t("units:ratesUnavailable");
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -229,6 +285,31 @@ export function ConverterPage() {
               onChange={chooseCategory}
               disabled={categoryOptions.length === 0}
             />
+
+            {category === "currency" ? (
+              <>
+                <div className={styles.rateBar} data-testid="currency-rate-bar">
+                  <p className={styles.rateSource} role="status" aria-live="polite">
+                    {rateSourceText}
+                  </p>
+                  <SoftButton
+                    size="sm"
+                    variant="ghost"
+                    onClick={refreshRates}
+                    loading={refreshing}
+                  >
+                    {t("units:refreshRates")}
+                  </SoftButton>
+                </div>
+                {currencyStatus?.refreshFailed ? (
+                  <p className={styles.rateWarning} role="status">
+                    {currencyStatus.available && currencyStatus.date
+                      ? t("units:refreshFailed", { date: currencyStatus.date })
+                      : t("units:refreshFailedNoCache")}
+                  </p>
+                ) : null}
+              </>
+            ) : null}
 
             <SoftCard padding="md" className={styles.panel}>
               <SoftInput

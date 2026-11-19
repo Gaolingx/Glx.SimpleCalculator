@@ -587,3 +587,58 @@ export async function convertUnit(input: UnitConversionInput): Promise<string> {
   }
   return result.value;
 }
+
+/** Mirrors `src-tauri::currency::CurrencyStatus`. */
+export interface CurrencyStatus {
+  source: string;
+  base: string;
+  date: string | null;
+  /** Unix epoch milliseconds of the last successful fetch. */
+  fetchedAt: number | null;
+  stale: boolean;
+  available: boolean;
+  refreshFailed: boolean;
+}
+
+const UNAVAILABLE_CURRENCY: CurrencyStatus = {
+  source: "ECB",
+  base: "EUR",
+  date: null,
+  fetchedAt: null,
+  stale: true,
+  available: false,
+  refreshFailed: false,
+};
+
+export function normalizeCurrencyStatus(value: unknown): CurrencyStatus {
+  if (!isRecord(value)) {
+    return { ...UNAVAILABLE_CURRENCY };
+  }
+  return {
+    source: typeof value.source === "string" && value.source ? value.source : "ECB",
+    base: typeof value.base === "string" && value.base ? value.base : "EUR",
+    date: typeof value.date === "string" && value.date ? value.date : null,
+    fetchedAt:
+      typeof value.fetchedAt === "number" && Number.isFinite(value.fetchedAt)
+        ? value.fetchedAt
+        : null,
+    stale: value.stale === true,
+    available: value.available === true,
+    refreshFailed: value.refreshFailed === true,
+  };
+}
+
+export async function fetchCurrencyStatus(): Promise<CurrencyStatus> {
+  if (!isTauriRuntime()) {
+    return { ...UNAVAILABLE_CURRENCY };
+  }
+  return normalizeCurrencyStatus(await invokeCommand<unknown>("currency_status"));
+}
+
+/** Asks Rust to refresh; within the 5s window it returns the current status. */
+export async function refreshCurrency(): Promise<CurrencyStatus> {
+  if (!isTauriRuntime()) {
+    return { ...UNAVAILABLE_CURRENCY };
+  }
+  return normalizeCurrencyStatus(await invokeCommand<unknown>("currency_refresh"));
+}

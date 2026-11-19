@@ -170,3 +170,25 @@
 - `t12-light-zh-CN-converter.png`、`t12-light-en-US-converter.png`、`t12-dark-zh-CN-converter.png`、`t12-dark-en-US-converter.png`（440×820，1x，`1 km = 1,000 m`）
 - `t12-light-zh-CN-converter-options.png`（类别下拉）
 - `t12-light-zh-CN-converter-currency.png`（汇率离线提示）
+
+# T13 ECB 汇率 — 2026-11-19
+
+- 方式：Edge headless CDP（440×820，1x，light/zh-CN 与 dark/en-US），`Page.addScriptToEvaluateOnNewDocument` 注入 mock `__TAURI_INTERNALS__`（目录、汇率状态、换算与刷新失败）渲染真实前端；ECB XML 解析、缓存与离线分支由 Rust fixture 集成测试覆盖，QA 不访问外网。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 布局 | `documentElement` 440/440、820/820；`main` 376/376、776/776；全部按钮在视口内 |
+| 在线态 | 状态条显示「数据来源：ECB · 2026-11-18」与刷新按钮；`1 EUR = 1.1585 USD` |
+| 刷新成功 | 刷新后保留来源/日期并重算当前货币结果 |
+| 刷新失败 | 结果保留，显示「汇率更新失败，使用 2026-11-18 数据」 |
+| 离线态 | dark/en-US 显示 `No exchange rates available`、`Exchange rate data is unavailable` 与重试提示 |
+| 控制台 | 0 console error / 0 异常 |
+| 测试 | 前端 153 项、Rust 218 项通过（Rust 含 ECB fixture 与离线分支 5 项集成测试） |
+
+## 截图
+
+- `t13-light-zh-CN-currency.png`（在线态与来源日期）
+- `t13-light-zh-CN-currency-refresh-failed.png`（刷新失败保留缓存）
+- `t13-dark-en-US-currency-offline.png`（离线无缓存）

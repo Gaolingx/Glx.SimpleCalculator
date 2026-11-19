@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T12 完成**（2026-11-19）：单位注册表 + 转换页（11 类；汇率数据接入留 T13）；下一步 T13 |
+| 当前进度 | **T13 完成**（2026-11-19）：ECB 汇率拉取/缓存/TTL/离线与手动刷新，货币换算已打通；下一步 T14 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -239,6 +239,19 @@ setx PATH "%PATH%;E:\node"
 - 截图：`docs/qa/2026-11-19/t12-{light,dark}-{zh-CN,en-US}-converter.png` + `t12-light-zh-CN-converter-options.png`（类别下拉）+ `t12-light-zh-CN-converter-currency.png`（离线提示）。
 
 
+**T13 实测记录（2026-11-19）**
+
+- 拉取：`src-tauri/src/currency.rs` 使用 `reqwest`（rustls，`https_only`，8s 超时，UA `GlxCalculator/<version>`）请求 ECB `eurofxref-daily.xml`；`quick-xml` 只读取 `Cube` 的 `time/currency/rate`，兼容命名空间；非法币种/非正汇率/非法日期在解析与读盘两层都会被丢弃。
+- 缓存：`currency-cache.json`（store 插件）保存 `{base:"EUR", date, fetchedAt, rates}`，与设置/历史同走 store 抽象；读取时再次 `sanitized`，坏文件降级为空缓存。TTL 24h，`fetchedAt` 缺失或超过 24h 即视为过期；启动后后台刷新，失败只告警并保留旧缓存，不阻塞 UI。
+- 限速/并发：`RefreshGate` 保证同一时刻仅一个请求、同一窗口 5s 内最多一次；冷却期内的手动刷新直接返回当前状态（不报错）。失败时状态带 `refreshFailed`，成功后清除。
+- 契约：新增 `currency_status()` → `{source, base, date, fetchedAt, stale, available, refreshFailed}` 与 `currency_refresh()`（失败返回 `NETWORK_ERROR`，缓存保留）；`convert_unit` 在货币类目注入缓存 `RateTable`，无缓存/缺币种仍返回 `CURRENCY_OFFLINE`。前端 `ipc.ts` 同步窄类型与防御性归一化。
+- 页面：汇率类目下新增状态条（`数据来源：ECB · 2026-11-18` + 刷新按钮），刷新成功后自动重算；失败且存在缓存时提示“汇率更新失败，使用 2026-11-18 数据”，无缓存时提示重试；原有结果错误与离线提示保留。
+- 测试：Rust 218 项（calc-core 183；shell 35 = 30 单测 + 5 集成），新增 ECB fixture 解析（含命名空间/坏值/非法日期）、缓存清理、TTL 边界（恰好 24h 不过期）、5s 限速与并发、状态 serde、离线/有缓存两条换算分支；前端 153 项（新增 3 项：来源+缓存换算、刷新后重算、刷新失败保留缓存）。
+- 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -- -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 383.42 kB（gzip 119.95 kB）、CSS 45.33 kB（gzip 7.63 kB）。
+- QA（Edge headless CDP，440×820）：`documentElement` 440/440、820/820，`main` 376/376、776/776，按钮全部在视口内，0 异常。在线态显示来源与日期并得 `1 EUR = 1.1585 USD`；刷新失败保留结果并显示缓存日期警告；离线态（dark/en-US）显示 `No exchange rates available`、错误与重试提示。截图流程注入 mock `__TAURI_INTERNALS__`，ECB 拉取/解析与离线分支由 Rust 集成测试覆盖。
+- 截图：`docs/qa/2026-11-19/t13-light-zh-CN-currency.png`、`t13-light-zh-CN-currency-refresh-failed.png`、`t13-dark-en-US-currency-offline.png`。
+
+
 ### 1.4 参考截图 → 布局结论
 
 - 自定义标题栏：左侧应用名 + `dev` 徽标，右侧最小化/最大化/关闭；内容区可拖拽。
@@ -458,6 +471,7 @@ pub enum CalcCommand {
 > T8 新增 `CalcCommand::Random`（`{"type":"random"}`）与 `session_select(mode)`：会话按窗口 + 模式隔离，页面挂载时激活；科学值可落为 `Number::Float`（最多 15 位有效数字，E 记法），`Decimal` 路径保持精确。
 > T9 新增 `UnaryOp::Not`（`{"type":"unary","op":"not"}`）；`Digit { digit }` 协议接受 0–15 以覆盖十六进制 A–F，程序员内核按当前 radix 拦截越界数字。`ProgrammerView` 的 `decimal` 为有符号投影，其余进制为字宽内无符号补码，`bits` 为固定字宽的 MSB-first 串。
 > T12 新增纯函数命令 `units_catalog()` → `UnitCatalog { categories[{id, units[{id, symbol}]}] }` 与 `convert_unit(category, value, from, to)` → `{value}`；业务错误以 `ErrorInfo` 返回（`UNKNOWN_UNIT` / `INVALID_INPUT` / `OVERFLOW` / `CURRENCY_OFFLINE`）。汇率表由 T13 注入；本任务货币换算固定返回 `CURRENCY_OFFLINE`。
+> T13 新增 `currency_status()` → `CurrencyStatus` 与 `currency_refresh()` → `CurrencyStatus`。缓存位于 `currency-cache.json`（TTL 24h），启动后仅过期时后台刷新；手动刷新 5s 内最多一次（冷却期返回当前状态）。刷新失败返回 `NETWORK_ERROR` 且保留旧缓存；`convert_unit` 的货币分支自动注入缓存汇率，无缓存仍返回 `CURRENCY_OFFLINE`。
 
 契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
@@ -750,7 +764,7 @@ src/i18n/locales/en-US/...（同构）
 | T10 | 程序员 UI | M4 | T9 | 进制/字宽切换、四进制显示、位网格、无效输入拦截 | 点击翻转位；切换进制同步 | done |
 | T11 | 统计型 | M5 | T4 | 数据集面板、统计函数、空集/单元素边界 | 与 Excel 样本一致 | done |
 | T12 | 单位注册表 + 转换页 | M6 | T3 | 11 类单位数据、`convert_unit`、双下拉/换向 UI | 每类 3 组黄金值；温度往返 | done |
-| T13 | 汇率 | M6 | T12 | ECB 拉取/解析/缓存/TTL/离线 UI/手动刷新 | 断网缓存；5s 限速；交叉汇率 | pending |
+| T13 | 汇率 | M6 | T12 | ECB 拉取/解析/缓存/TTL/离线 UI/手动刷新 | 断网缓存；5s 限速；交叉汇率 | done |
 | T14 | 日期计算 | M7 | T3 | 日期差/加减、`DatePicker`、本地化格式 | 闰年/月末夹取单测 | pending |
 | T15 | 工作表 | M8 | T3 | 注册表、抵押/油耗/租赁、通用表单与结果卡 | 黄金月供 ±0.01；字段级校验 | pending |
 | T16 | 打磨：DPI/无障碍/性能 | M9 | T5–T15 | DPI 矩阵、键盘全流程、reduced-motion、性能采样 | 冷启动/输入延迟/IPC p95 | pending |
@@ -875,7 +889,7 @@ npm run typecheck && npm run test
 - [x] 11 类单位注册表（id、符号、系数、仿射偏移）；单位名 i18n
 - [x] `convert_unit` 纯函数：双向换算、精度、极值（E 记法）
 - [x] 转换页 UI：`SoftCombobox` 双下拉 + 换向按钮 + 输入/结果卡片 + 复制
-- [ ] 汇率：ECB 拉取、XML 解析、缓存、启动刷新、手动刷新、离线提示（T13）
+- [x] 汇率：ECB 拉取、XML 解析、缓存、启动刷新、手动刷新、离线提示（T13）
 - [x] 校验：非法输入、负值（长度/质量）、温度为负数合法
 - [x] 单测：每类至少 3 组已知换算；温度往返（C↔F↔K）；汇率交叉换算
 
