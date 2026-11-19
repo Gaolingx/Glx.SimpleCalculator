@@ -94,6 +94,24 @@ export function HistoryIcon(props: AppIconProps) {
   );
 }
 
+export function CopyIcon(props: AppIconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="9" y="9" width="11" height="11" rx="2.5" />
+      <path d="M15 6.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7a2 2 0 002 2h.5" />
+    </Svg>
+  );
+}
+
+export function TrashIcon(props: AppIconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4.5 6.5h15M9.5 4h5M7 6.5l.8 12a1.5 1.5 0 001.5 1.4h5.4a1.5 1.5 0 001.5-1.4l.8-12" />
+      <path d="M10.5 10.5v5M13.5 10.5v5" />
+    </Svg>
+  );
+}
+
 export function SettingsIcon(props: AppIconProps) {
   return (
     <Svg {...props}>

@@ -482,3 +482,44 @@ fn invalid_command_is_rejected() {
     let view = engine.apply(CalcCommand::Digit { digit: 10 });
     assert_eq!(view.error.unwrap().code, ErrorCode::InvalidInput);
 }
+
+#[test]
+fn recall_restores_expression_and_value_without_reevaluating() {
+    let mut engine = Engine::default();
+    let view = engine.apply(CalcCommand::Recall {
+        expression: "2 + 3 =".into(),
+        value: "5".into(),
+    });
+    assert_eq!(view.expression, "2 + 3 =");
+    assert_eq!(view.value, "5");
+    assert_eq!(view.error, None);
+
+    let view = type_digit(&mut engine, 7);
+    assert_eq!(view.value, "7");
+}
+
+#[test]
+fn recalled_value_can_start_a_new_calculation() {
+    let mut engine = Engine::default();
+    engine.apply(CalcCommand::Recall {
+        expression: "sqrt(16) =".into(),
+        value: "4".into(),
+    });
+    let view = binary(&mut engine, BinaryOp::Add);
+    assert_eq!(view.expression, "4 +");
+    type_text(&mut engine, "6");
+    let view = press_equals(&mut engine);
+    assert_eq!(view.value, "10");
+    assert_eq!(view.expression, "4 + 6 =");
+}
+
+#[test]
+fn recall_rejects_non_numeric_values() {
+    let mut engine = Engine::default();
+    let view = engine.apply(CalcCommand::Recall {
+        expression: "x =".into(),
+        value: "not-a-number".into(),
+    });
+    assert_eq!(view.error.unwrap().code, ErrorCode::InvalidInput);
+    assert_eq!(view.value, "");
+}

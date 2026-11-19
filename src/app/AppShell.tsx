@@ -11,8 +11,9 @@ import { ScientificPage } from "../features/scientific/ScientificPage";
 import { SettingsSheet } from "../features/settings/SettingsSheet";
 import { StatisticsPage } from "../features/statistics/StatisticsPage";
 import { WorksheetsPage } from "../features/worksheets/WorksheetsPage";
+import type { CalcMode } from "../lib/ipc";
 import { useUiStore } from "../stores/ui";
-import { usePage, type PageId } from "./router";
+import { navigate, usePage, type PageId } from "./router";
 import styles from "./AppShell.module.css";
 
 const PAGES: Record<PageId, ComponentType> = {
@@ -25,8 +26,19 @@ const PAGES: Record<PageId, ComponentType> = {
   worksheets: WorksheetsPage,
 };
 
+const MODE_BY_PAGE: Record<PageId, CalcMode> = {
+  basic: "basic",
+  scientific: "scientific",
+  programmer: "programmer",
+  statistics: "statistics",
+  datecalc: "dateCalc",
+  converter: "converter",
+  worksheets: "worksheets",
+};
+
 export function AppShell() {
   const page = usePage();
+  const overlay = useUiStore((state) => state.overlay);
   const toggleOverlay = useUiStore((state) => state.toggleOverlay);
   const Page = PAGES[page];
 
@@ -50,7 +62,9 @@ export function AppShell() {
           <Page />
         </main>
       </div>
-      <HistoryDrawer />
+      {overlay === "history" ? (
+        <HistoryDrawer mode={MODE_BY_PAGE[page]} onNavigate={navigate} />
+      ) : null}
       <SettingsSheet />
     </div>
   );

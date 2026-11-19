@@ -3,5 +3,9 @@
   "empty": "暂无历史记录",
   "emptyHint": "完成一次运算后，结果会显示在这里。",
   "clear": "清空历史",
-  "clearConfirm": "确定清空全部历史记录吗？"
+  "clearConfirm": "确定清空全部历史记录吗？",
+  "delete": "删除",
+  "restoreEntry": "恢复 {{expression}}",
+  "today": "今天",
+  "yesterday": "昨天"
 }

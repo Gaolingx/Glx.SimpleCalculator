@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T5 完成**（2026-11-19）：标准模式 UI、`lib/format.ts`/`keyboard.ts`、Tauri `SessionMap` + `calc_command`；下一步 T6 |
+| 当前进度 | **T6 完成**（2026-11-19）：历史存储/抽屉/恢复/删除/清空/复制与设置联动；下一步 T7 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -150,6 +150,20 @@ setx PATH "%PATH%;E:\node"
 - 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 331.46 kB（gzip 104.18 kB）、CSS 25.43 kB（gzip 5.26 kB），仍在 250 kB gzip 预算内。
 - QA：Edge headless CDP 在 440×820 下输出 light/dark × zh-CN/en-US 四张截图，`scrollWidth/clientWidth = 440`、`scrollHeight/clientHeight = 820`，24 个按键全部位于视口内；Tauri dev + WebView2 CDP 实测 `2+3×4=14`、除零本地化错误、分组 `1,000,000`、CE 续算 `2+CE 4=6`、MS/MR，控制台 0 error；`calc_command` 20 次均延迟 1.77 ms、p95 2.5 ms（目标 <15 ms）。
 - 未纳入 T5：记忆面板（核心为单槽，需先做多槽记忆）、复制按钮/剪贴板（T7）、历史（T6）、小数位设置。复制按钮与右键菜单由 T7 在 `Display` / `Keypad` 上接入。
+
+**T6 实测记录（2026-11-19）**
+
+- 核心契约：新增 `CalcCommand::Recall { expression, value }`（tag `recall`）。与 `SetExpression` 不同，恢复历史时**不重新求值**：表达式仅用于展示，`value` 解析后成为可被替换的当前输入；`validate` 拒绝空串与超长（>1000 字符）。引擎保留待处理表达式以外的输入语义，恢复后直接键入数字会替换结果，按运算符可从恢复值继续计算。
+- Tauri 存储：新增 `src-tauri/src/history.rs`。`HistoryLog` 为纯内存日志（最新在前、连续重复折叠、上限截断、按 id 删除、按模式清空），`HistoryState` 通过 store 插件读写 `history.json`（键 `entries`）。命令 `history_list/history_add/history_delete/history_clear(mode)`；`history_add` 读取设置中的历史开关与上限，关闭时直接返回现有列表且不写盘。条目形如 `{id, mode, expression, value, ts}`，`ts` 为 Unix 毫秒、`id` 为纳秒字符串；本任务未引入 `meta` 字段。
+- 设置联动：`settings_set` / `settings_reset` 接收 `HistoryState`，在限制下调后立即截断并在内存/文件同步；截断写盘失败只记日志，不回滚设置保存。启动时按已加载设置的上限恢复历史。
+- 剪贴板：新增 `clipboard::clipboard_copy`（Rust `ClipboardExt`，长度上限 10,000），避免为 T6 提前引入插件 JS 包；读/粘贴仍留 T7。
+- 前端契约：`ipc.ts` 增加 `HistoryEntry/HistoryInput`、`recall` 命令、`fetchHistory/addHistory/deleteHistory/clearHistory(mode)/copyText`；历史响应做同构归一化，浏览器预览用 `glx.history.preview` 本地回退。
+- 记录触发：`lib/history.ts::isCompletedCalculation` 仅在命令为 `equals`、无错误、值为非空且表达式以 `=` 结尾时判定完成；`BasicPage` 在设置开启时调用 `history_add`（后续模式复用同一判据）。`session_reset` + `recall` 由抽屉恢复流程调用，完成后导航到条目所属模式并关闭抽屉。
+- 抽屉：按当前页面模式过滤条目；按本地日期分组（今天/昨天/具体日期），时间与数值使用 `Intl` 与 `formatNumber`；每条支持恢复、复制原始值、删除；清空需二次确认（取消/确定），清空范围限定当前模式。空状态、加载中、存储错误分别展示；焦点/键盘行为沿用 `SoftDialog`。
+- 测试：Rust 103 项（calc-core 87 = lib 81 + 契约 5 + 黄金 1；shell 16 = 设置 5 + 会话 3 + 历史 8）；前端 67 项（新增 `lib/history` 3、`HistoryDrawer` 7、`BasicPage` 历史记录/开关 2）。
+- 门禁：`cargo fmt --check` / `clippy -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 338.33 kB（gzip 105.91 kB）、CSS 28.18 kB（gzip 5.61 kB），仍在 250 kB gzip 预算内。
+- QA（Tauri dev + WebView2 CDP）：`2 + 3 =`、`10 × 2 =` 各生成一条，抽屉最新在前且分组正确；恢复 `2 + 3 =` 后显示 `5` 并保留表达式，继续 `× 2 =` 得 `10` 并新增条目；复制写入剪贴板原始值 `10`；删除/清空（确认→取消→确认）即时更新 `history.json`；重启应用后条目保留而会话归零；关闭历史开关后 `9 × 9 =` 不记录；105 条后将上限改为 100，内存列表与文件均截断为 100（保留最新）。控制台 0 error。
+- 截图：`docs/qa/2026-11-19/t6-{light,dark}-{zh-CN,en-US}-history.png`（Edge headless 440×820，`scrollWidth/Height` 与视口一致，四语/主题组合无溢出）。
 
 
 ### 1.4 参考截图 → 布局结论
@@ -365,6 +379,7 @@ pub enum CalcCommand {
 其余命令：`session_reset(mode)`、`convert_unit`、`currency_status/refresh`、`date_diff/date_add`、`worksheet_compute`、`stats_compute`、`history_list/add/delete/clear`、`settings_get/set/reset`、`app_info`。
 
 > T5 已实现 `calc_command` 与 `session_reset`。业务错误走 `CalcView.error`；`Result<_, ErrorInfo>` 仅表示协议级失败（当前恒为 `Ok`），前端仍按错误码统一处理。
+> T6 新增 `CalcCommand::Recall { expression, value }` 与 `history_list/add/delete/clear(mode)`、`clipboard_copy`。历史条目随 `history.json` 持久化，恢复采用「不重新求值」语义。
 
 契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
@@ -375,7 +390,7 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 | 文件（AppData） | 内容 | 策略 |
 |---|---|---|
 | `settings.json` | 主题、语言、分组开关、角度制、字宽/进制默认值、小数位、历史开关 | store 插件；启动时读取，变更即时写入 |
-| `history.json` | `{id, mode, expression, value, ts, meta}` | 默认上限 500（设置范围 100–1000），按时间倒序；`add/delete/clear` 全部走 Rust |
+| `history.json` | `{id, mode, expression, value, ts}` | 默认上限 500（设置范围 100–1000），按时间倒序；连续重复（与最新一条完全相同）折叠、不跨模式去重；列表与清空按当前模式；add/delete/clear 全部走 Rust；`meta` 暂未使用 |
 | `currency-cache.json` | `{base:"EUR", date, fetchedAt, rates}` | 与设置共用 store 抽象；TTL 24h；失败保留旧缓存 |
 | 窗口位置 | window-state 插件自动管理 | 不手写 |
 
@@ -650,7 +665,7 @@ src/i18n/locales/en-US/...（同构）
 | T3 | 窗口外壳 + 导航 + 设置 | M0 | T2 | `TitleBar`/`CaptionButtons`/`NavRail`/路由（7 页占位）、设置页与 store 读写、Spike A/B | 拖拽/缩放/关闭；重启保留设置；DPI 100/150 | done |
 | T4 | 核心 v1：值/解析/基本引擎 | M1 | T0 | `value/parser/engine/ops::basic`、错误、记忆、≥60 单测 | `cargo test -p calc-core` | done |
 | T5 | 标准模式 UI + 格式化 + 键盘 | M2 | T3,T4 | 标准页、`Display`、`Keypad`、`lib/format.ts`（分组）、键盘映射 | 手工用例表；Vitest 格式化 | done |
-| T6 | 历史记录 | M2 | T4,T5 | 存储命令、历史抽屉、恢复/删除/清空/复制 | 重启保留；上限；两语言 | pending |
+| T6 | 历史记录 | M2 | T4,T5 | 存储命令、历史抽屉、恢复/删除/清空/复制 | 重启保留；上限；两语言 | done |
 | T7 | 剪贴板 + 校验 + 右键菜单 | M2 | T5 | `lib/clipboard.ts`、粘贴清洗、`SoftMenu`、错误提示 | 非法粘贴；0x/0b；Ctrl+C/V | pending |
 | T8 | 科学型 | M3 | T4 | `ops::scientific`、科学键盘、角度制、F-E、定义域错误 | sin/cos/ln/阶乘/幂单测；RAD/DEG | pending |
 | T9 | 程序员核心 | M4 | T4 | 进制/字宽/位运算/旋转/补码、真值表与属性测试 | 掩码、环绕、BYTE/QWORD 边界 | pending |
@@ -721,7 +736,7 @@ npm run typecheck && npm run test
 - [x] `Display`（表达式行 + 主值 + 自动缩字号 + 分组渲染 + 防抖 `aria-live`；复制按钮随 T7）
 - [x] `Keypad`（4 列网格，对齐截图；hover/active 动效）
 - [x] 记忆行（MC/MR/M+/M−/MS，单槽）；记忆面板需多槽记忆，未纳入本次迭代
-- [ ] 历史抽屉（按日期分组、点击恢复、删除、清空、复制、空状态）
+- [x] 历史抽屉（按日期分组、按当前模式展示、点击恢复、删除、清空确认、复制、空状态）
 - [ ] 剪贴板：复制原始值、粘贴清洗、无效提示
 - [ ] 设置面板：主题/语言/分组开关/小数位/历史开关（`SoftSwitch`、`SoftSegmentedControl`）
 - [x] 基本模式快捷键 + 覆盖层/输入框焦点门控（复制粘贴与 F1 说明随 T7/T16）
@@ -845,7 +860,7 @@ npm run typecheck && npm run test
 | T2 | i18n 键集合/占位符；主题解析与存储容错 | `scripts/check-i18n.mjs`、`src/lib/theme.test.ts`、`src/i18n/i18n.test.ts` | 两语言键一致；system 解析与异常存储降级正确 |
 | T4 | 值/解析/引擎单测 + 黄金用例 | `crates/calc-core/src/**/#[cfg(test)]`、`tests/golden/basic.json` | ≥60 例；错误码稳定 |
 | T5 | 格式化（分组/有效数字/E 记法）与按键事件 | `src/lib/format.test.ts`、`src/features/basic/*.test.tsx` | 分组开关切换；Ctrl+C/V |
-| T6 | 历史上限/排序/持久化/恢复 | `src-tauri/tests/history.rs`（或 storage 单测） | 重启保留；超限淘汰 |
+| T6 | 历史上限/排序/持久化/恢复 | `src-tauri/src/history.rs` 单测（日志排序/折叠/截断/删除/清空/serde） | 重启保留；超限淘汰 |
 | T7 | 粘贴清洗（全角/分组符/0x/0b/超长） | `src/lib/clipboard.test.ts` | 非法输入不崩溃 |
 | T8 | 每个科学函数 + 角度制 + 定义域 | `crates/calc-core/tests/scientific.rs` | 与基准值一致 |
 | T9 | 位运算真值表 + ROL/ROR 互逆 + 字宽 | `crates/calc-core/tests/programmer.rs` | 属性测试通过 |
@@ -1057,6 +1072,7 @@ rm -rf src-tauri/target/release/bundle
 | 17 | 3.9 / T3 | capabilities 仅列插件权限，未说明自绘标题栏需要窗口写权限 | T3 实测补 `core:window:allow-start-dragging/minimize/toggle-maximize/close`；`core:default` 仅含读取与 drag-region 双击最大化 |
 | 18 | 4.7 / T4 | CE 后待处理表达式的显示语义未定义 | T5 明确：有待处理表达式时 CE 保留表达式并显示 `0`；无待处理表达式时清空显示与结果（附引擎测试） |
 | 19 | 3.5 / T5 | 基本模式的 E 记法阈值未定义 | 基本模式最多 16 位有效数字；指数 ≥16 或 ≤−16 转 E 记法，阈值由 `lib/format.ts` 参数化 |
+| 20 | 3.4 / T6 | 历史记录由谁写入、去重与恢复语义未定义 | 前端在完成的 `=` 后调用 `history_add`；条目最新在前、仅折叠与最新一条相同的连续重复；恢复使用 `Recall` 不重新求值；列表/清空按模式隔离 |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 

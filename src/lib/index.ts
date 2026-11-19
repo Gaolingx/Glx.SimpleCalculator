@@ -22,10 +22,16 @@ export { ERROR_CODES, IpcError, isTauriRuntime, toIpcError } from "./ipc";
 export type { ErrorCode } from "./ipc";
 export {
   CALC_MODES,
+  addHistory,
   calcCommand,
+  clearHistory,
+  copyText,
+  deleteHistory,
   emptyCalcView,
+  fetchHistory,
   isCalcMode,
   normalizeCalcView,
+  normalizeHistory,
   resetSession,
 } from "./ipc";
 export type {
@@ -35,10 +41,13 @@ export type {
   CalcView,
   ConstantId,
   ErrorInfo,
+  HistoryEntry,
+  HistoryInput,
   MemoryOp,
   ProgrammerView,
   UnaryOp,
 } from "./ipc";
+export { isCompletedCalculation, recallCommand } from "./history";
 export { formatExpression, formatNumber, groupInteger } from "./format";
 export type { FormatNumberOptions } from "./format";
 export { commandForKeyboard, isEditableTarget } from "./keyboard";

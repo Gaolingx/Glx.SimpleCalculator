@@ -12,6 +12,8 @@ use tauri::{AppHandle, State};
 use tauri_plugin_log::log::{error, warn};
 use tauri_plugin_store::StoreExt;
 
+use crate::history::HistoryState;
+
 const SETTINGS_FILE: &str = "settings.json";
 const SETTINGS_KEY: &str = "settings";
 const HISTORY_LIMIT_MIN: u32 = 100;
@@ -81,7 +83,7 @@ impl SettingsState {
         Self(Mutex::new(settings))
     }
 
-    fn get(&self) -> AppSettings {
+    pub(crate) fn get(&self) -> AppSettings {
         self.0
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -141,11 +143,13 @@ pub fn settings_get(state: State<'_, SettingsState>) -> AppSettings {
 pub fn settings_set(
     app: AppHandle,
     state: State<'_, SettingsState>,
+    history: State<'_, HistoryState>,
     settings: AppSettings,
 ) -> Result<AppSettings, ErrorInfo> {
     let settings = settings.sanitized();
     persist(&app, &settings)?;
     state.set(settings.clone());
+    history.trim(&app, settings.history_limit as usize);
     Ok(settings)
 }
 
@@ -153,10 +157,12 @@ pub fn settings_set(
 pub fn settings_reset(
     app: AppHandle,
     state: State<'_, SettingsState>,
+    history: State<'_, HistoryState>,
 ) -> Result<AppSettings, ErrorInfo> {
     let settings = AppSettings::default();
     persist(&app, &settings)?;
     state.set(settings.clone());
+    history.trim(&app, settings.history_limit as usize);
     Ok(settings)
 }
 

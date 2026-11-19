@@ -45,9 +45,17 @@ pub enum CalcCommand {
     ToggleBit {
         bit: u8,
     },
-    /// Replace the current entry, used by paste and history restore.
+    /// Replace the current entry, used by paste.
     SetExpression {
         text: String,
+    },
+    /// Restore a completed expression and its result from history.
+    ///
+    /// Unlike `SetExpression` this does not re-evaluate: the value is parsed
+    /// and displayed as-is, and typing replaces it.
+    Recall {
+        expression: String,
+        value: String,
     },
 }
 
@@ -129,6 +137,14 @@ impl CalcCommand {
                 Err(ErrorInfo::new(crate::error::ErrorCode::InvalidInput))
             }
             Self::SetExpression { text } if text.chars().count() > 1000 => {
+                Err(ErrorInfo::new(crate::error::ErrorCode::InvalidInput))
+            }
+            Self::Recall { expression, value }
+                if expression.is_empty()
+                    || value.is_empty()
+                    || expression.chars().count() > 1000
+                    || value.chars().count() > 1000 =>
+            {
                 Err(ErrorInfo::new(crate::error::ErrorCode::InvalidInput))
             }
             _ => Ok(()),

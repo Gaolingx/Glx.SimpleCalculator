@@ -10,6 +10,7 @@ import {
 } from "../../lib/ipc";
 import { DEFAULT_SETTINGS } from "../../lib/settings";
 import { useCalcStore } from "../../stores/calc";
+import { useHistoryStore } from "../../stores/history";
 import { useSettingsStore } from "../../stores/settings";
 import { useUiStore } from "../../stores/ui";
 import { BasicPage } from "./BasicPage";
@@ -17,6 +18,7 @@ import { BasicPage } from "./BasicPage";
 const backend = vi.hoisted(() => ({
   tauri: true,
   calcCommand: vi.fn<(command: CalcCommand) => Promise<CalcView>>(),
+  addHistory: vi.fn<(input: unknown) => Promise<unknown[]>>(),
 }));
 
 vi.mock("../../lib/ipc", async (importOriginal) => {
@@ -25,6 +27,7 @@ vi.mock("../../lib/ipc", async (importOriginal) => {
     ...actual,
     isTauriRuntime: () => backend.tauri,
     calcCommand: backend.calcCommand,
+    addHistory: backend.addHistory,
   };
 });
 
@@ -48,7 +51,10 @@ beforeEach(() => {
   backend.tauri = true;
   backend.calcCommand.mockReset();
   backend.calcCommand.mockResolvedValue(view());
+  backend.addHistory.mockReset();
+  backend.addHistory.mockResolvedValue([]);
   useCalcStore.setState({ views: {} });
+  useHistoryStore.setState({ entries: [], loaded: false, loading: false, error: null });
   useSettingsStore.setState({
     settings: { ...DEFAULT_SETTINGS, grouping: true },
     hydrated: true,
@@ -101,6 +107,38 @@ describe("BasicPage", () => {
       { type: "equals" },
     ]);
     expect(screen.getByText("2 + 3 =")).toBeTruthy();
+  });
+
+  it("records completed calculations in history", async () => {
+    backend.calcCommand.mockResolvedValue(
+      view({ expression: "2 + 3 =", value: "5" }),
+    );
+    render(<BasicPage />);
+
+    press("Enter");
+
+    await waitFor(() =>
+      expect(backend.addHistory).toHaveBeenCalledWith({
+        mode: "basic",
+        expression: "2 + 3 =",
+        value: "5",
+      }),
+    );
+  });
+
+  it("skips recording when history is disabled", async () => {
+    useSettingsStore.setState({
+      settings: { ...DEFAULT_SETTINGS, historyEnabled: false },
+    });
+    backend.calcCommand.mockResolvedValue(
+      view({ expression: "2 + 3 =", value: "5" }),
+    );
+    render(<BasicPage />);
+
+    press("Enter");
+
+    await waitFor(() => expect(valueText()).toBe("5"));
+    expect(backend.addHistory).not.toHaveBeenCalled();
   });
 
   it("formats the value with grouping driven by settings", async () => {

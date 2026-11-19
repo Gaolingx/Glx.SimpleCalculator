@@ -2,15 +2,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  calcCommand,
   emptyCalcView,
   isTauriRuntime,
   toIpcError,
   type CalcCommand,
   type ErrorCode,
 } from "../../lib/ipc";
+import { isCompletedCalculation } from "../../lib/history";
 import { commandForKeyboard, isEditableTarget } from "../../lib/keyboard";
 import { useCalcStore } from "../../stores/calc";
+import { useHistoryStore } from "../../stores/history";
 import { useSettingsStore } from "../../stores/settings";
 import { useUiStore } from "../../stores/ui";
 import { Display } from "./Display";
@@ -24,8 +25,10 @@ const EMPTY_VIEW = emptyCalcView(MODE);
 export function BasicPage() {
   const { t } = useTranslation();
   const view = useCalcStore((state) => state.views[MODE]) ?? EMPTY_VIEW;
-  const setView = useCalcStore((state) => state.setView);
+  const dispatch = useCalcStore((state) => state.dispatch);
+  const recordHistory = useHistoryStore((state) => state.record);
   const grouping = useSettingsStore((state) => state.settings.grouping);
+  const historyEnabled = useSettingsStore((state) => state.settings.historyEnabled);
   const overlay = useUiStore((state) => state.overlay);
   const [transportError, setTransportError] = useState<ErrorCode | null>(null);
   const [previewNotice, setPreviewNotice] = useState(false);
@@ -39,11 +42,23 @@ export function BasicPage() {
         return;
       }
       queue.current = queue.current
-        .then(() => calcCommand(command))
-        .then((next) => setView(next))
+        .then(() => dispatch(command))
+        .then((next) => {
+          if (
+            historyEnabled &&
+            command.type === "equals" &&
+            isCompletedCalculation(next)
+          ) {
+            void recordHistory({
+              mode: next.mode,
+              expression: next.expression,
+              value: next.value,
+            });
+          }
+        })
         .catch((error: unknown) => setTransportError(toIpcError(error).code));
     },
-    [setView],
+    [dispatch, historyEnabled, recordHistory],
   );
 
   useEffect(() => {

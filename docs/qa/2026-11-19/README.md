@@ -53,3 +53,26 @@
 - `t5-light-zh-CN-basic.png`、`t5-light-en-US-basic.png`、`t5-dark-zh-CN-basic.png`、`t5-dark-en-US-basic.png`（440×820，1x）
 - `t5-tauri-verified.png`（真实 Tauri WebView2，`2 + 3 × 4 =` 结果 14，逻辑 441×821 @175%）
 
+# T6 历史记录 — 2026-11-19
+
+- 方式：Tauri dev + WebView2 CDP（真实 IPC/存储/剪贴板）+ Edge headless（440×820 截图）。
+- 环境：同上。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 记录 | `2 + 3 =` 与 `10 × 2 =` 各生成一条；最新在前，按「今天/昨天」分组 |
+| 恢复 | 点击 `2 + 3 =` 后抽屉关闭，显示区值为 `5`、表达式保留；继续 `× 2 =` 得 `10` 并新增条目 |
+| 复制 | 写系统剪贴板为原始值 `10`（`Get-Clipboard` 校验），UI 提示「已复制」 |
+| 删除 | 单条删除后抽屉与 `history.json` 同步 |
+| 清空 | 二次确认（确认→取消→确认）；清空后展示空状态，文件 `entries` 为 `[]` |
+| 持久化 | 重启应用后历史保留、计算会话归零 |
+| 开关/上限 | 关闭历史后 `9 × 9 =` 不记录；105 条后上限改为 100，内存与文件均保留最新 100 条 |
+| 布局 | 440×820 下 light/dark × zh-CN/en-US 抽屉无溢出，控制台 0 error |
+| 测试 | 前端 67 项、Rust 103 项通过 |
+
+## 截图
+
+- `t6-light-zh-CN-history.png`、`t6-light-en-US-history.png`、`t6-dark-zh-CN-history.png`、`t6-dark-en-US-history.png`（440×820，1x）
+

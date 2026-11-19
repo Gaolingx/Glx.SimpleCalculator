@@ -65,6 +65,14 @@ fn commands_serialize_with_camel_case_tags() {
         .unwrap(),
         json!({ "type": "setExpression", "text": "0xFF" })
     );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::Recall {
+            expression: "2 + 3 =".into(),
+            value: "5".into()
+        })
+        .unwrap(),
+        json!({ "type": "recall", "expression": "2 + 3 =", "value": "5" })
+    );
 }
 
 #[test]
@@ -155,6 +163,24 @@ fn command_validation_rejects_out_of_range_values() {
     assert_eq!(
         CalcCommand::SetExpression {
             text: "1".repeat(1001)
+        }
+        .validate()
+        .unwrap_err()
+        .code,
+        ErrorCode::InvalidInput
+    );
+    assert!(
+        CalcCommand::Recall {
+            expression: "1 =".into(),
+            value: "1".into()
+        }
+        .validate()
+        .is_ok()
+    );
+    assert_eq!(
+        CalcCommand::Recall {
+            expression: String::new(),
+            value: "1".into()
         }
         .validate()
         .unwrap_err()

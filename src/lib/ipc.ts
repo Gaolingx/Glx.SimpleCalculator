@@ -147,7 +147,8 @@ export type CalcCommand =
   | { type: "closeGroup" }
   | { type: "constant"; id: ConstantId }
   | { type: "toggleBit"; bit: number }
-  | { type: "setExpression"; text: string };
+  | { type: "setExpression"; text: string }
+  | { type: "recall"; expression: string; value: string };
 
 export interface ErrorInfo {
   code: ErrorCode;
@@ -183,6 +184,22 @@ export function emptyCalcView(mode: CalcMode = "basic"): CalcView {
     programmer: null,
     error: null,
   };
+}
+
+/** Mirrors `src-tauri::history::HistoryEntry`. */
+export interface HistoryEntry {
+  id: string;
+  mode: CalcMode;
+  expression: string;
+  value: string;
+  /** Unix epoch milliseconds. */
+  ts: number;
+}
+
+export interface HistoryInput {
+  mode: CalcMode;
+  expression: string;
+  value: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -303,4 +320,131 @@ export async function resetSettings(): Promise<AppSettings> {
     return defaults;
   }
   return normalizeSettings(await invokeCommand<unknown>("settings_reset"));
+}
+
+const PREVIEW_HISTORY_KEY = "glx.history.preview";
+
+function normalizeHistoryEntry(value: unknown): HistoryEntry | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const { id, expression, value: rawValue, ts } = value;
+  if (
+    typeof id !== "string" ||
+    id === "" ||
+    !isCalcMode(value.mode) ||
+    typeof expression !== "string" ||
+    typeof rawValue !== "string" ||
+    rawValue === "" ||
+    typeof ts !== "number" ||
+    !Number.isFinite(ts)
+  ) {
+    return null;
+  }
+  return { id, mode: value.mode, expression, value: rawValue, ts };
+}
+
+export function normalizeHistory(value: unknown): HistoryEntry[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((item) => {
+    const entry = normalizeHistoryEntry(item);
+    return entry ? [entry] : [];
+  });
+}
+
+function readPreviewHistory(): HistoryEntry[] {
+  try {
+    const raw = window.localStorage.getItem(PREVIEW_HISTORY_KEY);
+    return normalizeHistory(raw ? JSON.parse(raw) : null);
+  } catch {
+    return [];
+  }
+}
+
+function writePreviewHistory(entries: HistoryEntry[]): void {
+  try {
+    window.localStorage.setItem(PREVIEW_HISTORY_KEY, JSON.stringify(entries));
+  } catch {
+    // Preview storage is best-effort; in-memory state still updates.
+  }
+}
+
+function previewHistoryEntry(input: HistoryInput): HistoryEntry {
+  const ts = Date.now();
+  return {
+    id: `${ts}-${Math.random().toString(36).slice(2, 8)}`,
+    ...input,
+    ts,
+  };
+}
+
+function addPreviewHistory(input: HistoryInput): HistoryEntry[] {
+  const settings = readPreviewSettings();
+  const existing = readPreviewHistory();
+  if (!settings.historyEnabled) {
+    return existing;
+  }
+  const entry = previewHistoryEntry(input);
+  const newest = existing[0];
+  const next =
+    newest &&
+    newest.mode === entry.mode &&
+    newest.expression === entry.expression &&
+    newest.value === entry.value
+      ? [{ ...newest, id: entry.id, ts: entry.ts }, ...existing.slice(1)]
+      : [entry, ...existing];
+  const limited = next.slice(0, settings.historyLimit);
+  writePreviewHistory(limited);
+  return limited;
+}
+
+export async function fetchHistory(): Promise<HistoryEntry[]> {
+  if (!isTauriRuntime()) {
+    return readPreviewHistory();
+  }
+  return normalizeHistory(await invokeCommand<unknown>("history_list"));
+}
+
+export async function addHistory(input: HistoryInput): Promise<HistoryEntry[]> {
+  if (!isTauriRuntime()) {
+    return addPreviewHistory(input);
+  }
+  return normalizeHistory(
+    await invokeCommand<unknown>("history_add", {
+      mode: input.mode,
+      expression: input.expression,
+      value: input.value,
+    }),
+  );
+}
+
+export async function deleteHistory(id: string): Promise<HistoryEntry[]> {
+  if (!isTauriRuntime()) {
+    const next = readPreviewHistory().filter((entry) => entry.id !== id);
+    writePreviewHistory(next);
+    return next;
+  }
+  return normalizeHistory(await invokeCommand<unknown>("history_delete", { id }));
+}
+
+export async function clearHistory(mode: CalcMode): Promise<HistoryEntry[]> {
+  if (!isTauriRuntime()) {
+    const next = readPreviewHistory().filter((entry) => entry.mode !== mode);
+    writePreviewHistory(next);
+    return next;
+  }
+  return normalizeHistory(await invokeCommand<unknown>("history_clear", { mode }));
+}
+
+export async function copyText(text: string): Promise<void> {
+  if (!isTauriRuntime()) {
+    if (typeof navigator === "undefined" || !navigator.clipboard) {
+      throw new IpcError("INTERNAL");
+    }
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  await invokeCommand<void>("clipboard_copy", { text });
 }

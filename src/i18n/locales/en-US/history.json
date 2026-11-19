@@ -3,5 +3,9 @@
   "empty": "No history yet",
   "emptyHint": "Finished calculations will be listed here.",
   "clear": "Clear history",
-  "clearConfirm": "Clear all history?"
+  "clearConfirm": "Clear all history?",
+  "delete": "Delete",
+  "restoreEntry": "Restore {{expression}}",
+  "today": "Today",
+  "yesterday": "Yesterday"
 }

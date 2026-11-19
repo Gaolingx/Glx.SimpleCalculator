@@ -170,6 +170,7 @@ impl Engine {
             }
             CalcCommand::ToggleBit { .. } => Err(ErrorInfo::new(ErrorCode::Unsupported)),
             CalcCommand::SetExpression { text } => self.set_expression(&text),
+            CalcCommand::Recall { expression, value } => self.recall(&expression, &value),
         };
 
         if let Err(err) = handled {
@@ -512,6 +513,19 @@ impl Engine {
         self.entry = None;
         self.result = Some(computed);
         self.replace_entry = false;
+        self.last_op = None;
+        Ok(())
+    }
+
+    /// Restores a history entry without re-evaluating: the stored expression is
+    /// display-only, the stored value becomes the current (replaceable) entry.
+    fn recall(&mut self, expression: &str, value: &str) -> CalcResult<()> {
+        let parsed = value::parse(value)?;
+        self.tokens.clear();
+        self.expression = expression.to_owned();
+        self.entry = Some(Entry::new(value::canonical(parsed)));
+        self.result = Some(parsed);
+        self.replace_entry = true;
         self.last_op = None;
         Ok(())
     }
