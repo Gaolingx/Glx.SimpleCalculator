@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::ErrorInfo;
 use crate::mode::{Mode, Radix, WordSize};
 use crate::units::UnitCategory;
+use crate::worksheet::{FieldKind, ResultKind, WorksheetId};
 
 /// Canonical state returned to the UI after every command.
 ///
@@ -114,4 +115,55 @@ pub struct DateDifference {
 #[serde(rename_all = "camelCase")]
 pub struct DateShift {
     pub date: String,
+}
+
+/// Registry projection for the worksheets page.
+///
+/// Field/result ids double as i18n keys; bounds and defaults are canonical
+/// strings so the UI can render and pre-validate the form without duplicating
+/// the registry.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorksheetCatalog {
+    pub worksheets: Vec<WorksheetInfo>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorksheetInfo {
+    pub id: WorksheetId,
+    pub fields: Vec<WorksheetFieldInfo>,
+    pub results: Vec<WorksheetResultInfo>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorksheetFieldInfo {
+    pub id: String,
+    pub kind: FieldKind,
+    /// Inclusive lower/upper bounds, canonical decimals.
+    pub min: String,
+    pub max: String,
+    pub default_value: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorksheetResultInfo {
+    pub id: String,
+    pub kind: ResultKind,
+}
+
+/// Computed values in registry order; `value` is canonical and ungrouped.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorksheetResult {
+    pub values: Vec<WorksheetValue>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorksheetValue {
+    pub id: String,
+    pub value: String,
 }

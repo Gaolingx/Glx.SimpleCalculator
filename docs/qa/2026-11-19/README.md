@@ -216,3 +216,27 @@
 - `t14-light-zh-CN-date-add.png`（减 1 个月）
 - `t14-dark-en-US-datecalc.png`（同日起始态）
 - `t14-dark-en-US-date-picker.png`（日历弹层，2024-02 含 29 日）
+
+# T15 工作表 — 2026-11-19
+
+- 方式：Edge headless CDP（440×820，1x，light/zh-CN 与 dark/en-US），`Page.addScriptToEvaluateOnNewDocument` 注入 mock `__TAURI_INTERNALS__`（设置、`worksheet_catalog`/`worksheet_compute` 的 JS 镜像）渲染真实前端；公式、边界与溢出由 Rust 工作表集成测试覆盖。
+- 交互：切换「油耗」；dark/en-US 切换「Lease」；残值改为 `300000`（等于车价）触发跨字段校验。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 布局 | `documentElement` 440/440、820/820；`main` 376/776；三张表按钮/输入均无越界，0 异常 |
+| 抵押 | `1,000,000 / 4.2% / 30 年` → 月供 `4,890.17`、总额 `1,760,461.20`、利息 `760,461.20` |
+| 油耗 | `500 km / 7.5 L/100km / 7.5` → `37.5 L`、`281.25`、`31.36 mpg(US)`、`37.66 mpg(UK)` |
+| 租赁 | 默认 `300000 / 150000 / 36 / 5% / 0%` → `5,104.17`、`183,750.12`、`33,750.00` |
+| 校验 | 残值 300000 时残值输入高亮并显示「Residual value must be below the vehicle price」，结果区提示「Fix the highlighted fields to recalculate」 |
+| 主题/语言 | light/zh-CN 与 dark/en-US 均无裸键、无裁切、0 console error |
+| 测试 | 前端 188 项、Rust 243 项通过 |
+
+## 截图
+
+- `t15-light-zh-CN-worksheet-mortgage.png`（抵押默认结果）
+- `t15-light-zh-CN-worksheet-fuel.png`（油耗与 mpg 明细）
+- `t15-dark-en-US-worksheet-lease.png`（租赁两列表单）
+- `t15-dark-en-US-worksheet-lease-invalid.png`（残值跨字段校验）

@@ -1,6 +1,63 @@
 {
   "title": "工作表",
-  "mortgage": "抵押贷款",
-  "fuel": "油耗",
-  "lease": "租赁"
+  "sheet": "工作表类型",
+  "result": "结果",
+  "resultHint": "输入后自动计算",
+  "fieldHint": "修正输入后自动计算",
+  "loading": "正在加载工作表…",
+  "loadFailed": "工作表加载失败",
+  "fieldRequired": "必填",
+  "fieldNumber": "请输入数字",
+  "fieldInteger": "请输入整数",
+  "fieldMin": "不能小于 {{min}}",
+  "fieldMax": "不能大于 {{max}}",
+  "fieldInvalid": "输入无效",
+  "copyResult": "复制{{name}}",
+  "rules": {
+    "residualBelowPrice": "残值必须小于车价"
+  },
+  "sheets": {
+    "mortgage": {
+      "title": "抵押贷款",
+      "fields": {
+        "principal": "本金",
+        "annualRate": "年利率（%）",
+        "years": "期限（年）"
+      },
+      "results": {
+        "monthlyPayment": "每月还款",
+        "totalPayment": "还款总额",
+        "totalInterest": "利息总额"
+      }
+    },
+    "fuel": {
+      "title": "油耗",
+      "fields": {
+        "distance": "行驶距离（公里）",
+        "consumption": "百公里油耗（升）",
+        "pricePerLiter": "油价（每升）"
+      },
+      "results": {
+        "totalFuel": "总油耗（升）",
+        "totalCost": "总费用",
+        "mpgUs": "英里/加仑（美制）",
+        "mpgUk": "英里/加仑（英制）"
+      }
+    },
+    "lease": {
+      "title": "租赁",
+      "fields": {
+        "price": "车价",
+        "residual": "残值",
+        "months": "期限（月）",
+        "apr": "年利率（%）",
+        "taxRate": "税率（%）"
+      },
+      "results": {
+        "monthlyPayment": "每月租金",
+        "totalCost": "总成本",
+        "rentCharge": "利息总额"
+      }
+    }
+  }
 }

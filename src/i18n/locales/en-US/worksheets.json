@@ -1,6 +1,63 @@
 {
   "title": "Worksheets",
-  "mortgage": "Mortgage",
-  "fuel": "Fuel",
-  "lease": "Lease"
+  "sheet": "Worksheet type",
+  "result": "Result",
+  "resultHint": "Values update automatically",
+  "fieldHint": "Fix the highlighted fields to recalculate",
+  "loading": "Loading worksheets…",
+  "loadFailed": "Could not load worksheets",
+  "fieldRequired": "Required",
+  "fieldNumber": "Enter a number",
+  "fieldInteger": "Enter a whole number",
+  "fieldMin": "Must be at least {{min}}",
+  "fieldMax": "Must be at most {{max}}",
+  "fieldInvalid": "Invalid value",
+  "copyResult": "Copy {{name}}",
+  "rules": {
+    "residualBelowPrice": "Residual value must be below the vehicle price"
+  },
+  "sheets": {
+    "mortgage": {
+      "title": "Mortgage",
+      "fields": {
+        "principal": "Principal",
+        "annualRate": "Annual interest rate (%)",
+        "years": "Term (years)"
+      },
+      "results": {
+        "monthlyPayment": "Monthly payment",
+        "totalPayment": "Total payments",
+        "totalInterest": "Total interest"
+      }
+    },
+    "fuel": {
+      "title": "Fuel",
+      "fields": {
+        "distance": "Distance (km)",
+        "consumption": "Fuel economy (L/100km)",
+        "pricePerLiter": "Fuel price (per liter)"
+      },
+      "results": {
+        "totalFuel": "Total fuel (L)",
+        "totalCost": "Total cost",
+        "mpgUs": "MPG (US)",
+        "mpgUk": "MPG (UK)"
+      }
+    },
+    "lease": {
+      "title": "Lease",
+      "fields": {
+        "price": "Vehicle price",
+        "residual": "Residual value",
+        "months": "Term (months)",
+        "apr": "Annual interest rate (%)",
+        "taxRate": "Tax rate (%)"
+      },
+      "results": {
+        "monthlyPayment": "Monthly payment",
+        "totalCost": "Total cost",
+        "rentCharge": "Total interest"
+      }
+    }
+  }
 }

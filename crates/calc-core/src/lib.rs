@@ -15,6 +15,7 @@ pub mod parser;
 pub mod units;
 pub mod value;
 pub mod view;
+pub mod worksheet;
 
 pub use command::{BinaryOp, CalcCommand, ConstantId, MemoryOp, StatOp, UnaryOp};
 pub use engine::Engine;
@@ -24,5 +25,7 @@ pub use units::{RateTable, UnitCategory};
 pub use value::Number;
 pub use view::{
     CalcView, DateDifference, DateShift, ProgrammerView, StatisticsView, UnitCatalog,
-    UnitCategoryInfo, UnitConversion, UnitInfo,
+    UnitCategoryInfo, UnitConversion, UnitInfo, WorksheetCatalog, WorksheetFieldInfo,
+    WorksheetInfo, WorksheetResult, WorksheetResultInfo, WorksheetValue,
 };
+pub use worksheet::{FieldKind, ResultKind, WorksheetId};

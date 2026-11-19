@@ -705,3 +705,137 @@ export async function dateAdd(input: DateShiftInput): Promise<string> {
   }
   return result.date;
 }
+
+/** Mirrors `calc_core::worksheet::WorksheetId` (navigation order). */
+export const WORKSHEET_IDS = ["mortgage", "fuel", "lease"] as const;
+
+export type WorksheetId = (typeof WORKSHEET_IDS)[number];
+export type WorksheetFieldKind = "decimal" | "integer";
+export type WorksheetResultKind = "money" | "decimal";
+
+/** Mirrors `calc_core::view::WorksheetFieldInfo`; bounds are canonical. */
+export interface WorksheetFieldInfo {
+  id: string;
+  kind: WorksheetFieldKind;
+  min: string;
+  max: string;
+  defaultValue: string;
+}
+
+export interface WorksheetResultInfo {
+  id: string;
+  kind: WorksheetResultKind;
+}
+
+export interface WorksheetInfo {
+  id: WorksheetId;
+  fields: WorksheetFieldInfo[];
+  results: WorksheetResultInfo[];
+}
+
+/** Mirrors `calc_core::view::WorksheetCatalog`. */
+export interface WorksheetCatalog {
+  worksheets: WorksheetInfo[];
+}
+
+export interface WorksheetValue {
+  id: string;
+  value: string;
+}
+
+/** Mirrors `calc_core::view::WorksheetResult`. */
+export interface WorksheetResult {
+  values: WorksheetValue[];
+}
+
+function isWorksheetId(value: unknown): value is WorksheetId {
+  return isOneOf(value, WORKSHEET_IDS);
+}
+
+function isWorksheetFieldKind(value: unknown): value is WorksheetFieldKind {
+  return value === "decimal" || value === "integer";
+}
+
+function isWorksheetResultKind(value: unknown): value is WorksheetResultKind {
+  return value === "money" || value === "decimal";
+}
+
+export function normalizeWorksheetCatalog(value: unknown): WorksheetCatalog {
+  if (!isRecord(value) || !Array.isArray(value.worksheets)) {
+    return { worksheets: [] };
+  }
+  const worksheets = value.worksheets.flatMap((entry) => {
+    if (!isRecord(entry) || !isWorksheetId(entry.id)) {
+      return [];
+    }
+    if (!Array.isArray(entry.fields) || !Array.isArray(entry.results)) {
+      return [];
+    }
+    const fields = entry.fields.flatMap((field) => {
+      if (
+        !isRecord(field) ||
+        typeof field.id !== "string" ||
+        field.id === "" ||
+        !isWorksheetFieldKind(field.kind) ||
+        typeof field.min !== "string" ||
+        typeof field.max !== "string" ||
+        typeof field.defaultValue !== "string"
+      ) {
+        return [];
+      }
+      return [
+        {
+          id: field.id,
+          kind: field.kind,
+          min: field.min,
+          max: field.max,
+          defaultValue: field.defaultValue,
+        },
+      ];
+    });
+    const results = entry.results.flatMap((result) => {
+      if (
+        !isRecord(result) ||
+        typeof result.id !== "string" ||
+        result.id === "" ||
+        !isWorksheetResultKind(result.kind)
+      ) {
+        return [];
+      }
+      return [{ id: result.id, kind: result.kind }];
+    });
+    if (fields.length === 0 || results.length === 0) {
+      return [];
+    }
+    return [{ id: entry.id, fields, results }];
+  });
+  return { worksheets };
+}
+
+export async function fetchWorksheetCatalog(): Promise<WorksheetCatalog> {
+  if (!isTauriRuntime()) {
+    return { worksheets: [] };
+  }
+  return normalizeWorksheetCatalog(await invokeCommand<unknown>("worksheet_catalog"));
+}
+
+/** Inputs are keyed by field id; values are the raw form strings. */
+export async function computeWorksheet(
+  sheet: WorksheetId,
+  inputs: Record<string, string>,
+): Promise<WorksheetResult> {
+  const result = await invokeCommand<unknown>("worksheet_compute", { sheet, inputs });
+  if (!isRecord(result) || !Array.isArray(result.values)) {
+    throw new IpcError("INTERNAL");
+  }
+  const values = result.values.flatMap((entry) => {
+    if (!isRecord(entry) || typeof entry.id !== "string" || typeof entry.value !== "string") {
+      return [];
+    }
+    return [{ id: entry.id, value: entry.value }];
+  });
+  if (values.length !== result.values.length || values.length === 0) {
+    throw new IpcError("INTERNAL");
+  }
+  return { values };
+}

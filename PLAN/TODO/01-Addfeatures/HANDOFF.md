@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T14 完成**（2026-11-19）：日期差/日期加减、`DatePicker`、闰年与月末夹取已打通；下一步 T15 |
+| 当前进度 | **T15 完成**（2026-11-19）：工作表注册表与抵押/油耗/租赁已打通；下一步 T16 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -264,6 +264,18 @@ setx PATH "%PATH%;E:\node"
 - 截图：`docs/qa/2026-11-19/t14-light-zh-CN-datecalc.png`、`t14-light-zh-CN-date-add.png`、`t14-dark-en-US-datecalc.png`、`t14-dark-en-US-date-picker.png`。
 
 
+**T15 实测记录（2026-11-19）**
+
+- 内核：新增 `crates/calc-core/src/worksheet.rs`。静态注册表含 3 个工作表（抵押/油耗/租赁）、字段 schema（id、decimal/integer、上下界、默认值）与结果定义；`catalog()` 供 UI 通用渲染，`compute(id, inputs)` 先逐字段解析校验（去分组、整数检查、范围），再执行公式。字段错误以 `INVALID_INPUT` + `args:[字段 id]` 返回，跨字段规则以 `args:["residualBelowPrice"]` 返回。
+- 语义（写入 §13 第 27 条）：抵押月供 `P·r·(1+r)^n / ((1+r)^n−1)`（`r=年利率/1200`、`n=年数×12`，零利率回退 `P/n`），总额为四舍五入后的月供 × 期数；油耗 `L = 距离/100 × L/100km`、费用 `L × 油价`，并给出 `mpg(US)=235.214583…/L/100km`、`mpg(UK)=282.480936…/L/100km`；租赁 `moneyFactor=APR/2400`，月租 `((车价−残值)/月数 + (车价+残值)×moneyFactor)×(1+税率/100)`，总成本为月租 × 月数。全部金额走 Decimal，中间值保留满精度，最终 2 位小数 `MidpointAwayFromZero`；`checked_powi`/`checked_mul` 溢出返回 `OVERFLOW`。
+- 契约：新增 `worksheet_catalog()` → `WorksheetCatalog` 与 `worksheet_compute(sheet, inputs)` → `WorksheetResult {values:[{id,value}]}`；DTO 全 camelCase（`defaultValue`、`kind`），`ipc.ts` 同步窄类型、目录/结果防御性归一化。
+- 页面：`WorksheetsPage` 以分段控件切换 3 张表，表单完全由注册表渲染；本地按 kind/min/max 预校验，非法时不调用内核；输入 120ms 防抖并以请求键丢弃过期响应；后端字段错误定位到对应输入，`residualBelowPrice` 映射到残值字段并高亮，其他错误显示表单级提示。结果卡按 `money` 固定两位小数并按分组设置显示，`decimal` 用 12–16 位有效数字；逐项复制规范原始值；加载失败可重试，浏览器预览仍显示提示。5 字段的租赁表单使用两列紧凑网格，保证 440×820 内无裁切。
+- 测试：Rust 243 项（calc-core 202 = lib 136 + 契约 9 + 黄金 1 + 程序员 16 + 科学 9 + 统计 11 + 单位 5 + 日期 6 + 工作表 9；shell 41 = 38 单测 + 3 集成）；前端 188 项（新增 `WorksheetsPage` 8）。
+- 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -- -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 411.50 kB（gzip 127.45 kB）、CSS 56.38 kB（gzip 8.63 kB），仍在 250 kB gzip 预算内。
+- QA（Edge headless CDP，440×820）：`documentElement` 440/440、820/820，`main` 376/776，三张表均无横向溢出、无按钮/输入越界，0 异常。抵押默认 `1,000,000 / 4.2% / 30 年` → 月供 `4,890.17`、总额 `1,760,461.20`、利息 `760,461.20`；油耗 `500 km / 7.5 L/100km / 7.5` → `37.5 L`、`281.25`、`31.36 mpg(US)`、`37.66 mpg(UK)`；租赁默认 → `5,104.17`、`183,750.12`、`33,750.00`；残值改为 `300000`（等于车价）时残值字段高亮并显示“残值必须小于车价”。截图流程注入 mock `__TAURI_INTERNALS__`，真实公式由 Rust 集成测试覆盖。
+- 截图：`docs/qa/2026-11-19/t15-light-zh-CN-worksheet-mortgage.png`、`t15-light-zh-CN-worksheet-fuel.png`、`t15-dark-en-US-worksheet-lease.png`、`t15-dark-en-US-worksheet-lease-invalid.png`。
+
+
 ### 1.4 参考截图 → 布局结论
 
 - 自定义标题栏：左侧应用名 + `dev` 徽标，右侧最小化/最大化/关闭；内容区可拖拽。
@@ -485,6 +497,7 @@ pub enum CalcCommand {
 > T12 新增纯函数命令 `units_catalog()` → `UnitCatalog { categories[{id, units[{id, symbol}]}] }` 与 `convert_unit(category, value, from, to)` → `{value}`；业务错误以 `ErrorInfo` 返回（`UNKNOWN_UNIT` / `INVALID_INPUT` / `OVERFLOW` / `CURRENCY_OFFLINE`）。汇率表由 T13 注入；本任务货币换算固定返回 `CURRENCY_OFFLINE`。
 > T13 新增 `currency_status()` → `CurrencyStatus` 与 `currency_refresh()` → `CurrencyStatus`。缓存位于 `currency-cache.json`（TTL 24h），启动后仅过期时后台刷新；手动刷新 5s 内最多一次（冷却期返回当前状态）。刷新失败返回 `NETWORK_ERROR` 且保留旧缓存；`convert_unit` 的货币分支自动注入缓存汇率，无缓存仍返回 `CURRENCY_OFFLINE`。
 > T14 新增纯函数 `date_diff(from,to)` → `DateDifference {years,months,days,totalDays,totalWeeks}` 与 `date_add(date,years,months,weeks,days)` → `DateShift {date}`。日期限 `0001-01-01`–`9999-12-31`；先按月（月末夹取）再加天/周；越界为 `OVERFLOW`，非法日期/数量为 `INVALID_INPUT`。
+> T15 新增 `worksheet_catalog()` → `WorksheetCatalog {worksheets[{id,fields[{id,kind,min,max,defaultValue}],results[{id,kind}]}]}` 与 `worksheet_compute(sheet, inputs)` → `WorksheetResult {values[{id,value}]}`。`kind` 为 `decimal|integer`（字段）与 `money|decimal`（结果）；字段错误 `INVALID_INPUT` 的 `args[0]` 为字段 id，跨字段规则为 `residualBelowPrice`。金额结果已按 2 位小数四舍五入，`value` 仍为未分组规范值。
 
 契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
@@ -779,7 +792,7 @@ src/i18n/locales/en-US/...（同构）
 | T12 | 单位注册表 + 转换页 | M6 | T3 | 11 类单位数据、`convert_unit`、双下拉/换向 UI | 每类 3 组黄金值；温度往返 | done |
 | T13 | 汇率 | M6 | T12 | ECB 拉取/解析/缓存/TTL/离线 UI/手动刷新 | 断网缓存；5s 限速；交叉汇率 | done |
 | T14 | 日期计算 | M7 | T3 | 日期差/加减、`DatePicker`、本地化格式 | 闰年/月末夹取单测 | done |
-| T15 | 工作表 | M8 | T3 | 注册表、抵押/油耗/租赁、通用表单与结果卡 | 黄金月供 ±0.01；字段级校验 | pending |
+| T15 | 工作表 | M8 | T3 | 注册表、抵押/油耗/租赁、通用表单与结果卡 | 黄金月供 ±0.01；字段级校验 | done |
 | T16 | 打磨：DPI/无障碍/性能 | M9 | T5–T15 | DPI 矩阵、键盘全流程、reduced-motion、性能采样 | 冷启动/输入延迟/IPC p95 | pending |
 | T17 | 打包 | M9 | T16 | 图标、NSIS/MSI、WebView2 策略、体积优化 | 安装/卸载/启动 | pending |
 | T18 | QA 与文档 | M9 | T16,T17 | QA 矩阵记录、截图归档、README、已知问题 | 检查表全勾；截图可追溯 | pending |
@@ -927,12 +940,12 @@ npm run typecheck && npm run test
 ### M8 工作表（2 人日）
 
 **任务**
-- [ ] 工作表注册表（id、字段 schema、校验、计算命令、i18n）
-- [ ] 抵押贷款：本金/年利率/年限/还款方式（等额本息，等额本金 P2）→ 月供、总利息、总还款
-- [ ] 油耗：距离/油耗/油价 → 总油耗、总费用；`L/100km ↔ mpg(US/UK)`
-- [ ] 租赁：车价/残值/期限/利率/税费 → 月租、总成本
-- [ ] 通用表单渲染 + 结果明细卡 + 复制
-- [ ] 单测：公式黄金值（与在线计算器对齐）、除零/负值校验
+- [x] 工作表注册表（id、字段 schema、校验、计算命令、i18n）
+- [x] 抵押贷款：本金/年利率/年限/还款方式（等额本息，等额本金 P2）→ 月供、总利息、总还款
+- [x] 油耗：距离/油耗/油价 → 总油耗、总费用；`L/100km ↔ mpg(US/UK)`
+- [x] 租赁：车价/残值/期限/利率/税费 → 月租、总成本
+- [x] 通用表单渲染 + 结果明细卡 + 复制
+- [x] 单测：公式黄金值（与在线计算器对齐）、除零/负值校验
 
 **验收**
 - 100 万、4.2%、30 年 → 月供与基准一致（±0.01）
@@ -1184,6 +1197,7 @@ rm -rf src-tauri/target/release/bundle
 | 24 | 4.7 / T6 | 一元函数结果按 `=` 会把表达式行与历史退化为 `0.5 =`，且定义域错误会清空 `tan(90)` | T8 让一元表达式在按 `=` 时保留（`sin(30) =`），并在求值前写入表达式，使定义域错误仍显示原输入 |
 | 25 | 3.5 / 6.0 T12 | 货币换算在 T12 尚无汇率数据，容易与“11 类全部可用”混淆 | T12 交付 11 类元数据、纯交叉换算与 fixture 测试；`convert_unit` 对货币返回 `CURRENCY_OFFLINE`，页面提示联网后更新；T13 注入 ECB 缓存后启用。负值策略同时明确：温度/速度/角度/汇率允许，长度/面积/体积/质量/压力/功率/时间拒绝 |
 | 26 | 3.10 / T14 | 日期差的方向、按月加减“先夹取还是后夹取”、复制格式未定义 | T14 明确：分量在较早→较晚区间计算且非负，`totalDays` 带符号、`totalWeeks` 截断；先按月夹取月末再加天/周；日期限 0001–9999，越界 `OVERFLOW`；复制日期用 ISO、结果区用本地化长格式、触发器用本地化数字短格式 |
+| 27 | 3.5 / 3.6 / T15 | 工作表三公式与金额口径、租赁税费/利率含义、字段校验归属未定义 | T15 明确：抵押用等额本息年金公式（`r=年利率/1200`、`n=年数×12`，零利率回退 `P/n`），总还款=四舍五入月供×期数、总利息=总还款−本金（负值归零）；油耗按 `L/100km` 计算总油耗与费用，并按精确加仑/英里定义给出 `mpg(US/UK)`；租赁 `moneyFactor=APR/2400`、税按税率乘月租、总成本=月租×月数、利息明细=月租中的租金部分×月数，且残值必须小于车价；字段边界由注册表声明、前端预校验、内核二次校验，金额最终 2 位小数 `MidpointAwayFromZero` |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 

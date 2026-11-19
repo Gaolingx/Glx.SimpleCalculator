@@ -1,7 +1,7 @@
 use calc_core::{
-    AngleUnit, BinaryOp, CalcCommand, CalcView, ConstantId, ErrorCode, ErrorInfo, Mode,
-    ProgrammerView, Radix, StatOp, StatisticsView, UnaryOp, UnitCatalog, UnitCategory,
-    UnitCategoryInfo, UnitConversion, UnitInfo, WordSize,
+    AngleUnit, BinaryOp, CalcCommand, CalcView, ConstantId, ErrorCode, ErrorInfo, FieldKind, Mode,
+    ProgrammerView, Radix, ResultKind, StatOp, StatisticsView, UnaryOp, UnitCatalog, UnitCategory,
+    UnitCategoryInfo, UnitConversion, UnitInfo, WordSize, WorksheetId,
 };
 use serde_json::json;
 
@@ -322,5 +322,50 @@ fn command_validation_rejects_out_of_range_values() {
         .unwrap_err()
         .code,
         ErrorCode::InvalidInput
+    );
+}
+
+#[test]
+fn worksheet_payloads_use_camel_case() {
+    assert_eq!(
+        serde_json::to_value(WorksheetId::Mortgage).unwrap(),
+        json!("mortgage")
+    );
+    assert_eq!(
+        serde_json::to_value(FieldKind::Integer).unwrap(),
+        json!("integer")
+    );
+    assert_eq!(
+        serde_json::to_value(ResultKind::Money).unwrap(),
+        json!("money")
+    );
+
+    let catalog = serde_json::to_value(calc_core::worksheet::catalog()).unwrap();
+    assert_eq!(catalog["worksheets"][0]["id"], "mortgage");
+    assert_eq!(
+        catalog["worksheets"][0]["fields"][0]["defaultValue"],
+        "1000000"
+    );
+    assert_eq!(catalog["worksheets"][0]["fields"][2]["kind"], "integer");
+    assert_eq!(catalog["worksheets"][2]["results"][0]["kind"], "money");
+
+    let inputs = [
+        ("distance".to_owned(), "500".to_owned()),
+        ("consumption".to_owned(), "7.5".to_owned()),
+        ("pricePerLiter".to_owned(), "7.5".to_owned()),
+    ]
+    .into_iter()
+    .collect();
+    let result = calc_core::worksheet::compute(WorksheetId::Fuel, &inputs).unwrap();
+    assert_eq!(
+        serde_json::to_value(result).unwrap(),
+        json!({
+            "values": [
+                { "id": "totalFuel", "value": "37.5" },
+                { "id": "totalCost", "value": "281.25" },
+                { "id": "mpgUs", "value": "31.36" },
+                { "id": "mpgUk", "value": "37.66" }
+            ]
+        })
     );
 }

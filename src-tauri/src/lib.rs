@@ -12,6 +12,7 @@ mod history;
 mod session;
 mod settings;
 mod units;
+mod worksheet;
 
 use tauri::Manager;
 
@@ -64,6 +65,8 @@ pub fn run() {
             currency::currency_refresh,
             date::date_diff,
             date::date_add,
+            worksheet::worksheet_catalog,
+            worksheet::worksheet_compute,
         ])
         .run(tauri::generate_context!())
         .expect("failed to launch Glx Calculator");

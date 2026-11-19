@@ -1,0 +1,207 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+  padding: 1rem 1.5rem 1.25rem;
+  overflow-y: auto;
+}
+
+.header {
+  flex: none;
+}
+
+.title {
+  font-size: var(--text-heading);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+  line-height: var(--leading-heading);
+}
+
+.calculator {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 32.5rem;
+  min-height: 0;
+  margin: 0 auto;
+}
+
+.panel {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+/* Five-field worksheets (lease) fit the 820px window with a compact grid. */
+.fieldsDense {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.fieldsDense > *:last-child:nth-child(odd) {
+  grid-column: span 2;
+}
+
+/* Reserve two label lines so wrapped labels do not stagger the inputs. */
+.fieldsDense label {
+  display: flex;
+  align-items: flex-end;
+  min-height: 1.9rem;
+}
+
+.formError {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.resultBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.resultHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 1.5rem;
+}
+
+.resultLabel {
+  color: var(--color-text-muted);
+  font-size: var(--text-label);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.resultList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+}
+
+.resultRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--color-surface-3);
+}
+
+.resultRow:last-child {
+  border-bottom: none;
+}
+
+.resultName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resultValue {
+  flex: none;
+  margin: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  color: var(--color-text);
+  font-size: 1.0625rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.resultValue::-webkit-scrollbar {
+  display: none;
+}
+
+.resultRow:first-child .resultValue {
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.copy {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 0.625rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-soft),
+    color var(--duration-fast) var(--ease-soft);
+}
+
+.copy:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+.copy:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.copy:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.resultHint {
+  margin: 0;
+  padding: 0.5rem 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+  text-align: right;
+}
+
+.stateCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.stateText {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+@media (max-height: 52rem) {
+  .page {
+    gap: 0.5rem;
+    padding: 0.75rem 1rem 1rem;
+  }
+}
