@@ -90,6 +90,8 @@ pub enum UnaryOp {
     Floor,
     Ceil,
     Round,
+    /// Bitwise complement; programmer mode only.
+    Not,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -132,7 +134,9 @@ impl CalcCommand {
     /// the engine; invalid values must never panic.
     pub fn validate(&self) -> Result<(), ErrorInfo> {
         match self {
-            Self::Digit { digit } if *digit > 9 => {
+            // 10–15 are the hexadecimal keys A–F; the engine rejects digits
+            // that are out of range for the active radix.
+            Self::Digit { digit } if *digit > 15 => {
                 Err(ErrorInfo::new(crate::error::ErrorCode::InvalidInput))
             }
             Self::ToggleBit { bit } if *bit > 63 => {

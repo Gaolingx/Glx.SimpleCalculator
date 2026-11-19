@@ -127,8 +127,8 @@ export function cleanPaste(raw: string): PasteResult {
 
 /**
  * Commands that apply a cleaned paste. The programmer session switches radix
- * and inserts the literal; every other mode receives its decimal equivalent so
- * paste keeps working before the programmer engine lands (T9/T10).
+ * and inserts the literal (T9 engine); every other mode receives its decimal
+ * equivalent.
  */
 export function pasteCommands(
   result: Extract<PasteResult, { ok: true }>,

@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T8 完成**（2026-11-19）：科学函数、角度制、F-E、科学键盘与模式级会话；下一步 T9 |
+| 当前进度 | **T9 完成**（2026-11-19）：程序员内核（i64/字宽/位运算/补码视图）；下一步 T10 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -189,6 +189,17 @@ setx PATH "%PATH%;E:\node"
 - QA（Tauri dev + WebView2 CDP，真实 IPC）：`30 sin` → `0.5`；RAD 下 `π ÷ 2 =` 后 `sin` → `1`；GRAD 下 `sin(100)` → `1` 且 `settings.json` 的 `angleUnit=grad`；`170!` → `7.25741561530799e+306`；F-E 将 `1,234.5` 显示为 `1.2345e+3` 并可切回；连续两次 `rand` 结果不同；`tan(90)`、`ln(0)` 显示「超出定义域」且表达式行保留，随后输入 `5` 恢复；`sin(30) =` 表达式保留；历史恢复后角度制与计算继续正确；Ctrl+C 复制 `0.5`、右键菜单 4 项与 Esc 关闭正常。441×821 客户端尺寸无溢出，控制台 0 error。
 - 实机发现并修复：科学函数定义域错误丢表达式；一元结果按 `=` 丢失函数表达式；截图中 `xʸ` 误用运算符底色、`⌊x⌋/⌈x⌉` 字形不可辨、F-E 按钮缺乏控件感（改为 `floor/ceil/exp` 文本与 function 变体）。
 - 截图：`docs/qa/2026-11-19/t8-{light,dark}-{zh-CN,en-US}-scientific.png`（440×820）+ `t8-tauri-verified.png`（170!，真实 175% DPI）。
+
+**T9 实测记录（2026-11-19）**
+
+- 数值模型：新增 `ops::programmer`，内部统一用符号扩展的 `i64` 位模式，所有结果按 `WordSize` 掩码截断后再符号扩展。十进制投影显示有符号值；二/八/十六进制投影显示字宽内的无符号补码；`bits` 固定为字宽长度、MSB 在前。完全不经过 f64，64 位值无精度丢失。
+- 位运算：`AND OR XOR NOT LSH RSH ROL ROR MOD`；`+ − ×` 使用 `wrapping_*`，除法向零截断（`i64::MIN / -1` 环绕），除零/模零返回 `DIVIDE_BY_ZERO`。右移为逻辑移位（补 0），移位次数 ≥ 字宽得 0；旋转次数按字宽取模，`ROL`/`ROR` 严格互逆。非法移位次数（负数）返回 `INVALID_INPUT`。
+- 输入与字宽：数字键按当前进制校验，二进制下按 `2` 被静默拦截；每进制输入位数上限由字宽推导（BYTE：二进制 8 / 八进制 3 / 十进制 3 / 十六进制 2）。`SetRadix` 保留数值并重渲染当前输入；`SetWordSize` 同时截断输入、待定 token、结果、记忆与重复运算操作数；“切换后提示”留给 T10 UI。
+- 引擎：`Engine` 在 `Mode::Programmer` 下路由到独立 `ProgrammerSession`，Decimal/f64 路径零改动。支持连算、括号外的运算符优先级（OR < XOR < AND < 移位/旋转 < `+ −` < `× ÷ MOD`）、重复 `=`、退格、CE/C、`±`、字宽内记忆、`ToggleBit`、`SetExpression`（粘贴）与 `Recall`。错误保留尝试的表达式（如 `5 / 0`），数字/退格可恢复。
+- 契约：新增 `UnaryOp::Not`（`{"type":"unary","op":"not"}`）；`Digit` 协议范围放宽到 0–15（A–F），基本/科学引擎拒绝 >9，程序员引擎按 radix 拦截；前端 `ipc.ts` 联合类型同步。
+- 测试：Rust 160 项（calc-core 143 = lib 112 + 契约 5 + 黄金 1 + 程序员集成 16 + 科学集成 9；shell 17）；前端 105 项不变。属性覆盖：BYTE 全量 256² 真值表、BYTE 256 × 移位次数 10 的 `ROL/ROR` 互逆、固定种子 64 位旋转互逆、`NOT(NOT(x)) = x`。
+- 门禁：`cargo fmt --check` / `clippy -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物不变：JS 350.77 kB（gzip 109.59 kB）、CSS 31.74 kB（gzip 6.04 kB）。
+- 验收：`0xFF AND 0x0F = 0x0F`、`NOT 0`（BYTE）= `0xFF`（主显示 `-1`）、`ROL(0x8000_0000_0000_0001, 1) = 0x3` 均由集成测试覆盖；`18446744073709551615` 在 QWORD 下与 `0xFFFF_FFFF_FFFF_FFFF` 互显为 `-1`。本任务无 UI 变更，实机界面验收随 T10。
 
 
 ### 1.4 参考截图 → 布局结论
@@ -407,6 +418,7 @@ pub enum CalcCommand {
 > T6 新增 `CalcCommand::Recall { expression, value }` 与 `history_list/add/delete/clear(mode)`、`clipboard_copy`。历史条目随 `history.json` 持久化，恢复采用「不重新求值」语义。
 > T7 新增 `clipboard_read`（系统剪贴板读取，空剪贴板返回空串）；粘贴清洗与右键菜单均在前端，清洗长度上限 1,000 字符。
 > T8 新增 `CalcCommand::Random`（`{"type":"random"}`）与 `session_select(mode)`：会话按窗口 + 模式隔离，页面挂载时激活；科学值可落为 `Number::Float`（最多 15 位有效数字，E 记法），`Decimal` 路径保持精确。
+> T9 新增 `UnaryOp::Not`（`{"type":"unary","op":"not"}`）；`Digit { digit }` 协议接受 0–15 以覆盖十六进制 A–F，程序员内核按当前 radix 拦截越界数字。`ProgrammerView` 的 `decimal` 为有符号投影，其余进制为字宽内无符号补码，`bits` 为固定字宽的 MSB-first 串。
 
 契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
@@ -695,7 +707,7 @@ src/i18n/locales/en-US/...（同构）
 | T6 | 历史记录 | M2 | T4,T5 | 存储命令、历史抽屉、恢复/删除/清空/复制 | 重启保留；上限；两语言 | done |
 | T7 | 剪贴板 + 校验 + 右键菜单 | M2 | T5 | `lib/clipboard.ts`、粘贴清洗、`SoftMenu`、错误提示 | 非法粘贴；0x/0b；Ctrl+C/V | done |
 | T8 | 科学型 | M3 | T4 | `ops::scientific`、科学键盘、角度制、F-E、定义域错误 | sin/cos/ln/阶乘/幂单测；RAD/DEG | done |
-| T9 | 程序员核心 | M4 | T4 | 进制/字宽/位运算/旋转/补码、真值表与属性测试 | 掩码、环绕、BYTE/QWORD 边界 | pending |
+| T9 | 程序员核心 | M4 | T4 | 进制/字宽/位运算/旋转/补码、真值表与属性测试 | 掩码、环绕、BYTE/QWORD 边界 | done |
 | T10 | 程序员 UI | M4 | T9 | 进制/字宽切换、四进制显示、位网格、无效输入拦截 | 点击翻转位；切换进制同步 | pending |
 | T11 | 统计型 | M5 | T4 | 数据集面板、统计函数、空集/单元素边界 | 与 Excel 样本一致 | pending |
 | T12 | 单位注册表 + 转换页 | M6 | T3 | 11 类单位数据、`convert_unit`、双下拉/换向 UI | 每类 3 组黄金值；温度往返 | pending |
@@ -792,13 +804,13 @@ npm run typecheck && npm run test
 ### M4 程序员模式（2–3 人日，**重点**）
 
 **任务**
-- [ ] 进制 2/8/10/16 输入掩码与四种进制同步显示（QWORD/DWORD/WORD/BYTE）
-- [ ] 字宽掩码 + 截断规则；负数补码显示
-- [ ] 位运算：`AND OR XOR NOT LSH RSH ROL ROR MOD`（环绕移位在字宽内进行）
-- [ ] 十进制整数算术 + 除法截断 + 溢出环绕（`wrapping_*`）
-- [ ] 位网格：64/32/16/8 单元，可点击翻转、键盘可达（P1）
-- [ ] 进制分组显示（4/3 位）+ 无效数字拦截
-- [ ] 单测：位运算真值表、移位/旋转对称性（`ROL`/`ROR` 互逆）、字宽边界
+- [x] 进制 2/8/10/16 输入掩码与四种进制同步显示（QWORD/DWORD/WORD/BYTE）
+- [x] 字宽掩码 + 截断规则；负数补码显示
+- [x] 位运算：`AND OR XOR NOT LSH RSH ROL ROR MOD`（环绕移位在字宽内进行）
+- [x] 十进制整数算术 + 除法截断 + 溢出环绕（`wrapping_*`）
+- [ ] 位网格：64/32/16/8 单元，可点击翻转、键盘可达（P1，T10）
+- [ ] 进制分组显示（4/3 位，T10）+ 无效数字拦截（内核已完成）
+- [x] 单测：位运算真值表、移位/旋转对称性（`ROL`/`ROR` 互逆）、字宽边界
 
 **验收**
 - `0xFF AND 0x0F = 0x0F`；`NOT 0`（BYTE）= `0xFF`；`ROL(0x8000_0000_0000_0001,1)` 正确环绕

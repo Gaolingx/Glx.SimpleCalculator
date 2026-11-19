@@ -167,6 +167,7 @@ pub fn apply_unary(op: UnaryOp, value: f64, unit: AngleUnit) -> CalcResult<f64> 
         Floor => value.floor(),
         Ceil => value.ceil(),
         Round => round_half_away_from_zero(value),
+        Not => return Err(unsupported()),
     };
 
     finite(result)

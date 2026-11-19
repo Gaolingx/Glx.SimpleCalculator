@@ -110,7 +110,7 @@ pub fn apply_unary(op: UnaryOp, value: Decimal) -> CalcResult<Decimal> {
         Ceil => Ok(value.ceil()),
         Round => Ok(value.round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero)),
         CubeRoot | Factorial | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh | Tanh
-        | Asinh | Acosh | Atanh | Ln | Log10 | Log2 | Exp => {
+        | Asinh | Acosh | Atanh | Ln | Log10 | Log2 | Exp | Not => {
             Err(ErrorInfo::new(ErrorCode::Unsupported))
         }
     }

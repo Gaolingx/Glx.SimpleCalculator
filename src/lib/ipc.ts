@@ -107,7 +107,8 @@ export type UnaryOp =
   | "abs"
   | "floor"
   | "ceil"
-  | "round";
+  | "round"
+  | "not";
 
 export type BinaryOp =
   | "add"

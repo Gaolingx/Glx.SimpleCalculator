@@ -14,6 +14,10 @@ use crate::parser::{self, Token};
 use crate::value::{self, Number};
 use crate::view::CalcView;
 
+mod programmer;
+
+use programmer::ProgrammerSession;
+
 const PI: &str = "3.1415926535897932384626433833";
 const E: &str = "2.7182818284590452353602874714";
 const MAX_ENTRY_CHARS: usize = 32;
@@ -77,6 +81,7 @@ pub struct Engine {
     /// expression should survive an immediate `=`.
     unary_expression: bool,
     rng_state: u64,
+    programmer: ProgrammerSession,
 }
 
 impl Default for Engine {
@@ -102,6 +107,7 @@ impl Engine {
             replace_entry: false,
             unary_expression: false,
             rng_state: random_seed(),
+            programmer: ProgrammerSession::default(),
         }
     }
 
@@ -110,6 +116,9 @@ impl Engine {
     }
 
     pub fn apply(&mut self, command: CalcCommand) -> CalcView {
+        if self.mode == Mode::Programmer {
+            return self.programmer.apply(command);
+        }
         if command.validate().is_err() {
             self.error = Some(ErrorInfo::new(ErrorCode::InvalidInput));
             return self.view();
@@ -197,6 +206,9 @@ impl Engine {
     }
 
     pub fn view(&self) -> CalcView {
+        if self.mode == Mode::Programmer {
+            return self.programmer.view();
+        }
         let value = match (&self.entry, self.result) {
             (Some(entry), _) => entry.raw.clone(),
             (None, Some(result)) => result.canonical(),
@@ -218,6 +230,9 @@ impl Engine {
     }
 
     fn digit(&mut self, digit: u8) -> CalcResult<()> {
+        if digit > 9 {
+            return Err(ErrorInfo::new(ErrorCode::InvalidInput));
+        }
         self.begin_entry_if_needed();
         if self.replace_entry {
             self.entry = Some(Entry::new(digit.to_string()));
@@ -634,6 +649,7 @@ fn unary_name(op: UnaryOp) -> &'static str {
         UnaryOp::Floor => "floor",
         UnaryOp::Ceil => "ceil",
         UnaryOp::Round => "round",
+        UnaryOp::Not => "not",
     }
 }
 #[cfg(test)]

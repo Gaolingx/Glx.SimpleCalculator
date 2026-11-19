@@ -12,6 +12,7 @@ use crate::parser::Expr;
 use crate::value::Number;
 
 pub mod basic;
+pub mod programmer;
 pub mod scientific;
 
 pub fn evaluate(expr: &Expr, mode: Mode) -> CalcResult<Number> {

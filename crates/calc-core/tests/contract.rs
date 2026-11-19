@@ -30,6 +30,10 @@ fn commands_serialize_with_camel_case_tags() {
         json!({ "type": "binary", "op": "xor" })
     );
     assert_eq!(
+        serde_json::to_value(CalcCommand::Unary { op: UnaryOp::Not }).unwrap(),
+        json!({ "type": "unary", "op": "not" })
+    );
+    assert_eq!(
         serde_json::to_value(CalcCommand::SetRadix {
             radix: Radix::Hexadecimal
         })
@@ -149,8 +153,9 @@ fn calc_view_uses_camel_case_and_null_optionals() {
 #[test]
 fn command_validation_rejects_out_of_range_values() {
     assert!(CalcCommand::Digit { digit: 9 }.validate().is_ok());
+    assert!(CalcCommand::Digit { digit: 15 }.validate().is_ok());
     assert_eq!(
-        CalcCommand::Digit { digit: 10 }
+        CalcCommand::Digit { digit: 16 }
             .validate()
             .unwrap_err()
             .code,
