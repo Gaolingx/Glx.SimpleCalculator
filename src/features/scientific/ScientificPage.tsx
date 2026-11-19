@@ -33,6 +33,7 @@ export function ScientificPage() {
     previewNotice,
     menu,
     setMenu,
+    clearPulse,
     send,
     copyValue,
     handlePaste,
@@ -77,6 +78,7 @@ export function ScientificPage() {
           memory={view.memory !== null}
           notation={scientificNotation ? "scientific" : "auto"}
           onCopy={() => copyValue(view.value)}
+          flashToken={clearPulse}
         />
         <MemoryBar hasMemory={view.memory !== null} onCommand={send} />
         <div className={styles.toolbar}>

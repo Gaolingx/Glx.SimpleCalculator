@@ -45,6 +45,7 @@ export function ProgrammerPage() {
     previewNotice,
     menu,
     setMenu,
+    clearPulse,
     send,
     copyValue,
     handlePaste,
@@ -129,6 +130,7 @@ export function ProgrammerPage() {
           grouping={grouping}
           memory={view.memory !== null}
           onCopy={() => copyValue(view.value)}
+          flashToken={clearPulse}
         />
         <MemoryBar hasMemory={view.memory !== null} onCommand={send} />
         <SoftSegmentedControl

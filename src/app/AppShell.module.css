@@ -38,3 +38,10 @@
   min-width: 0;
   min-height: 0;
 }
+
+/* Same-document view transition: opacity crossfade, no movement. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}

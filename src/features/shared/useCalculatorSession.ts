@@ -34,6 +34,8 @@ export interface CalculatorSession {
   menu: MenuPosition | null;
   setMenu: (menu: MenuPosition | null) => void;
   overlay: OverlayId | null;
+  /** Increments when a clear-all command is dispatched; replays the display flash. */
+  clearPulse: number;
   /** Resolves with the resulting view, or `null` in preview/transport errors. */
   send: (command: CalcCommand) => Promise<CalcView | null>;
   copyValue: (text: string) => void;
@@ -56,6 +58,7 @@ export function useCalculatorSession(mode: CalcMode): CalculatorSession {
   const [transportError, setTransportError] = useState<ErrorCode | null>(null);
   const [previewNotice, setPreviewNotice] = useState(false);
   const [menu, setMenu] = useState<MenuPosition | null>(null);
+  const [clearPulse, setClearPulse] = useState(0);
   const queue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
@@ -80,6 +83,9 @@ export function useCalculatorSession(mode: CalcMode): CalculatorSession {
 
   const send = useCallback(
     (command: CalcCommand): Promise<CalcView | null> => {
+      if (command.type === "clearAll") {
+        setClearPulse((pulse) => pulse + 1);
+      }
       setTransportError(null);
       if (!isTauriRuntime()) {
         setPreviewNotice(true);
@@ -193,6 +199,7 @@ export function useCalculatorSession(mode: CalcMode): CalculatorSession {
     menu,
     setMenu,
     overlay,
+    clearPulse,
     send,
     copyValue,
     handlePaste,

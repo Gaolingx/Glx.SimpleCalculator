@@ -19,6 +19,7 @@ export function BasicPage() {
     previewNotice,
     menu,
     setMenu,
+    clearPulse,
     send,
     copyValue,
     handlePaste,
@@ -44,6 +45,7 @@ export function BasicPage() {
           grouping={grouping}
           memory={view.memory !== null}
           onCopy={() => copyValue(view.value)}
+          flashToken={clearPulse}
         />
         <MemoryBar hasMemory={view.memory !== null} onCommand={send} />
         <Keypad onCommand={send} />

@@ -41,9 +41,49 @@ export function usePage(): PageId {
   return useSyncExternalStore(subscribe, readPage, () => DEFAULT_PAGE);
 }
 
+/**
+ * Applies the hash change and resolves once React has committed the new page.
+ * View transitions take the "new" snapshot only after this resolves, so the
+ * crossfade never exposes an empty frame.
+ */
+function applyRoute(apply: () => void): Promise<void> {
+  apply();
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve();
+    };
+    window.requestAnimationFrame(() => window.requestAnimationFrame(finish));
+    window.setTimeout(finish, 150);
+  });
+}
+
 export function navigate(page: PageId): void {
+  if (typeof window === "undefined") {
+    return;
+  }
   const hash = `#/${page}`;
-  if (window.location.hash !== hash) {
+  if (window.location.hash === hash) {
+    return;
+  }
+
+  const apply = () => {
     window.location.hash = hash;
+  };
+
+  if (typeof document.startViewTransition !== "function") {
+    apply();
+    return;
+  }
+
+  try {
+    const transition = document.startViewTransition(() => applyRoute(apply));
+    transition.finished.catch(() => undefined);
+  } catch {
+    apply();
   }
 }

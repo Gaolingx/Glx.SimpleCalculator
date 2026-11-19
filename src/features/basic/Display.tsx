@@ -20,6 +20,8 @@ export interface DisplayProps {
   valueText?: string;
   /** Pre-formatted expression line (radix-aware grouping). */
   expressionText?: string;
+  /** Increments on clear-all; replays the fade-out/in flash on the value. */
+  flashToken?: number;
 }
 
 const SIZE_STEPS: ReadonlyArray<readonly [number, string]> = [
@@ -50,6 +52,7 @@ export function Display({
   notation = "auto",
   valueText,
   expressionText,
+  flashToken = 0,
 }: DisplayProps) {
   const { t } = useTranslation();
   const displayValue =
@@ -75,6 +78,24 @@ export function Display({
       node.scrollLeft = node.scrollWidth;
     }
   }, [mainText]);
+
+  // Web Animations API instead of a CSS animation: the global
+  // prefers-reduced-motion rule shortens CSS animations to 1ms, which would
+  // also paint one blank frame on clear.
+  useEffect(() => {
+    if (flashToken === 0) {
+      return undefined;
+    }
+    const node = valueRef.current;
+    if (!node || typeof node.animate !== "function") {
+      return undefined;
+    }
+    const animation = node.animate(
+      [{ opacity: 1 }, { opacity: 0, offset: 0.4 }, { opacity: 1 }],
+      { duration: 380, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+    );
+    return () => animation.cancel();
+  }, [flashToken]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setAnnounced(mainText), 300);
