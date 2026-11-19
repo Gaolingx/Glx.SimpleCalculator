@@ -4,19 +4,18 @@
 //! - no Tauri, no I/O, no network, no user-facing text;
 //! - canonical raw values only; display formatting lives in the frontend;
 //! - errors cross the IPC boundary as `{ code, args }`.
-//!
-//! Planned modules (introduced by later tasks):
-//! - `value`, `parser`, `engine` (basic session)
-//! - `ops::{basic, scientific, programmer, statistics}`
-//! - `units` (+ currency conversion over a supplied rate table)
-//! - `date`, `worksheet`
 
 pub mod command;
+pub mod engine;
 pub mod error;
 pub mod mode;
+pub mod ops;
+pub mod parser;
+pub mod value;
 pub mod view;
 
 pub use command::{BinaryOp, CalcCommand, ConstantId, MemoryOp, UnaryOp};
+pub use engine::Engine;
 pub use error::{CalcResult, ErrorCode, ErrorInfo};
 pub use mode::{AngleUnit, Mode, Radix, WordSize};
 pub use view::{CalcView, ProgrammerView};

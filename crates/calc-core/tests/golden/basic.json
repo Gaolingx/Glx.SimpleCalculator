@@ -1,0 +1,74 @@
+[
+  {
+    "name": "addition",
+    "commands": [
+      { "type": "digit", "digit": 2 },
+      { "type": "binary", "op": "add" },
+      { "type": "digit", "digit": 3 },
+      { "type": "equals" }
+    ],
+    "expression": "2 + 3 =",
+    "value": "5"
+  },
+  {
+    "name": "precedence",
+    "commands": [
+      { "type": "digit", "digit": 2 },
+      { "type": "binary", "op": "add" },
+      { "type": "digit", "digit": 3 },
+      { "type": "binary", "op": "multiply" },
+      { "type": "digit", "digit": 4 },
+      { "type": "equals" }
+    ],
+    "expression": "2 + 3 * 4 =",
+    "value": "14"
+  },
+  {
+    "name": "repeated-equals",
+    "commands": [
+      { "type": "digit", "digit": 2 },
+      { "type": "binary", "op": "add" },
+      { "type": "digit", "digit": 3 },
+      { "type": "equals" },
+      { "type": "equals" }
+    ],
+    "expression": "5 + 3 =",
+    "value": "8"
+  },
+  {
+    "name": "percent-of-base",
+    "commands": [
+      { "type": "digit", "digit": 5 },
+      { "type": "digit", "digit": 0 },
+      { "type": "binary", "op": "add" },
+      { "type": "digit", "digit": 1 },
+      { "type": "digit", "digit": 0 },
+      { "type": "percent" },
+      { "type": "equals" }
+    ],
+    "expression": "50 + 5 =",
+    "value": "55"
+  },
+  {
+    "name": "divide-by-zero",
+    "commands": [
+      { "type": "digit", "digit": 1 },
+      { "type": "binary", "op": "divide" },
+      { "type": "digit", "digit": 0 },
+      { "type": "equals" }
+    ],
+    "expression": "1 / 0",
+    "value": "",
+    "error": "DIVIDE_BY_ZERO"
+  },
+  {
+    "name": "memory-store",
+    "commands": [
+      { "type": "digit", "digit": 7 },
+      { "type": "memory", "op": "store" }
+    ],
+    "expression": "",
+    "value": "7",
+    "memory": "7"
+  }
+]

@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T3 完成**（2026-11-19）：无边框外壳/导航/7 页占位/设置持久化，Spike A/B 已验证；下一步 T4 |
+| 当前进度 | **T4 完成**（2026-11-19）：`calc-core` 值/解析/基本引擎 + 记忆 + 82 项内核测试；下一步 T5 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -126,6 +126,16 @@ setx PATH "%PATH%;E:\node"
 - 测试：前端 31 项（含设置归一化、store 回滚、路由、UI store）；Rust 10 项（契约 5 + 设置 5）。
 - 构建：JS 321.04 kB（gzip 100.50 kB）、CSS 21.43 kB（gzip 4.57 kB）、字体 48.25 kB，按 §8 gzip 预算通过。
 - 截图归档：`docs/qa/2026-11-19/`（light/dark × zh/en + 设置弹层，5 张，共约 148 kB）。
+
+**T4 实测记录（2026-11-19）**
+
+- 依赖：新增 `rust_decimal@1.43.0`（`maths` 特性，用于 `Decimal::sqrt`），仅 `calc-core` 使用，不进入 Tauri 层。
+- 模块：`value`（解析/分组剥离/全角与排版符号归一化/规范化输出/极值窗口）、`parser`（tokenizer + 递归下降，`+ -` < `* /` < `^` 右结合 < 一元负号，`%` 为后缀除以 100）、`engine`（会话状态机）、`ops::basic`（四则/取余/整数幂/百分比/一元）、`ops::evaluate`（AST 求值）。`format.rs` 未单列，canonical 输出收敛在 `value::canonical`，避免空壳模块。
+- 语义决策：`=` 按表达式优先级求值（`2+3×4=14`，非 Windows 标准模式的立即执行 20）；百分比采用 Windows 语义（`50+10%=55`、`200×10%=20`、单独 `50%=0.5`）；错误后数字/退格/运算符恢复，`C` 立即清除；重复 `=` 复用最后一次二元运算；一元函数对当前值生效并保留待处理表达式。
+- 契约内但未在 M1 实现：科学函数（T8）、位运算/进制视图（T9）、统计（T11）；当前返回 `UNSUPPORTED`，不 panic。
+- 测试：82 项（lib 76 + 契约 5 + 黄金 1 组 6 用例）；覆盖优先级/括号/幂右结合、连算与重复 `=`、百分比三种语义、除零/溢出/定义域/语法/非法输入、记忆四操作、退格与 CE/C、错误恢复、粘贴表达式、负数补零与分组解析。黄金用例 `tests/golden/basic.json` 由引擎直接执行，后续 TS 侧可复用同一文件。
+- 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -D warnings` / `cargo test --workspace`（87 项）全绿；前端未修改。
+- 记忆为单槽（`CalcView.memory: Option<String>`），记忆面板列表属前端展示层；多值记忆栈留待 M2 按 UI 需要扩展。
 
 ### 1.4 参考截图 → 布局结论
 
@@ -619,7 +629,7 @@ src/i18n/locales/en-US/...（同构）
 | T1 | Tauri + React 脚手架 + CI | M0 | T0 | `src-tauri` 配置/插件/权限、Vite/TS/oxlint（见 1.3）、`package-lock.json`、`.github/workflows/ci.yml` | `npm install`；`npm run tauri dev`；CI 绿 | done |
 | T2 | 设计系统 + i18n + 主题 | M0 | T1 | `tokens.css`（双主题）、字体、`SoftButton/Card/Input/Tooltip/Toast`、i18n 初始化与 zh/en 骨架 | 两主题/两语言截图；`check:i18n` | done |
 | T3 | 窗口外壳 + 导航 + 设置 | M0 | T2 | `TitleBar`/`CaptionButtons`/`NavRail`/路由（7 页占位）、设置页与 store 读写、Spike A/B | 拖拽/缩放/关闭；重启保留设置；DPI 100/150 | done |
-| T4 | 核心 v1：值/解析/基本引擎 | M1 | T0 | `value/parser/engine/ops::basic`、错误、记忆、≥60 单测 | `cargo test -p calc-core` | pending |
+| T4 | 核心 v1：值/解析/基本引擎 | M1 | T0 | `value/parser/engine/ops::basic`、错误、记忆、≥60 单测 | `cargo test -p calc-core` | done |
 | T5 | 标准模式 UI + 格式化 + 键盘 | M2 | T3,T4 | 标准页、`Display`、`Keypad`、`lib/format.ts`（分组）、键盘映射 | 手工用例表；Vitest 格式化 | pending |
 | T6 | 历史记录 | M2 | T4,T5 | 存储命令、历史抽屉、恢复/删除/清空/复制 | 重启保留；上限；两语言 | pending |
 | T7 | 剪贴板 + 校验 + 右键菜单 | M2 | T5 | `lib/clipboard.ts`、粘贴清洗、`SoftMenu`、错误提示 | 非法粘贴；0x/0b；Ctrl+C/V | pending |
@@ -673,14 +683,14 @@ npm run typecheck && npm run test
 ### M1 计算内核 v1：基本模式（2–3 人日）
 
 **任务**
-- [ ] `value.rs`：Decimal 规范化、有效数字、尾零、极值
-- [ ] `parser.rs`：tokenizer + Pratt/调度场解析（优先级、括号、一元函数）
-- [ ] `engine.rs`：会话状态机（输入数字、连算、重复 `=`、退格、CE/C、±、%）
-- [ ] 记忆（MC/MR/M+/M−/MS）与记忆栈
-- [ ] 错误类型（DivideByZero/Overflow/InvalidInput/DomainError/Syntax）及恢复路径
-- [ ] `format.rs`：原始值输出契约（不含分组）
-- [ ] 单测：≥60 例，覆盖优先级、连算、百分比语义、边界
-- [ ] `proptest`：`parse(format(x)) == x` 往返（可选）
+- [x] `value.rs`：Decimal 规范化、有效数字、尾零、极值
+- [x] `parser.rs`：tokenizer + 递归下降解析（优先级、括号、一元函数）
+- [x] `engine.rs`：会话状态机（输入数字、连算、重复 `=`、退格、CE/C、±、%）
+- [x] 记忆（MC/MR/M+/M−/MS）与记忆槽
+- [x] 错误类型（DivideByZero/Overflow/InvalidInput/DomainError/Syntax）及恢复路径
+- [x] 原始值输出契约（`value::canonical`，不含分组；未单列 `format.rs`，见 1.3 T4 记录）
+- [x] 单测：≥60 例（实际 82 项），覆盖优先级、连算、百分比语义、边界
+- [ ] `proptest`：`parse(format(x)) == x` 往返（可选，未引入依赖）
 
 **验收**
 - `cargo test -p calc-core` 全绿；错误用例返回稳定 code
