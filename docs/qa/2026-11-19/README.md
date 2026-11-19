@@ -316,3 +316,26 @@
 - NSIS 为 `currentUser`，无需提权即可安装/卸载；适合普通用户分发。MSI 适合管理员集中部署。
 - 未配置代码签名证书，SmartScreen 可能提示；本迭代不启用自动更新。
 - 版本号保持 `0.1.0`，产物归档与发布说明在 T19 处理。
+
+# T18 合并回归与文档 — 2026-11-19
+
+- 方式：release exe（`c910b06`，SHA-256 `eb15cdff…d3782fc`）+ `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9225`，Node + CDP 驱动真实 WebView2；真实 IPC/设置/历史/系统剪贴板。视口 440×820；DPI 1–2× 设备缩放模拟；文本 150% 走 `--ui-scale` / `html[data-ui-scale]` 路径。运行前后恢复设置、历史、汇率缓存、窗口状态与系统剪贴板。
+- 完整矩阵、检查表与已知问题见 [T18-QA-MATRIX.md](T18-QA-MATRIX.md)。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 功能矩阵 | 20/20 PASS：基本 `2+3×4=14`、科学 `sin(30)=0.5`、程序员 `255→FF`、统计 `1..10→5.5`、换算 `1 km=1,000 m`、日期差 0 天 / +1 天、抵押月供 `4,890.17` |
+| 主题/语言 | light/dark × zh-CN/en-US 即时切换；English 下 43 个按钮标签全翻译，无裸键 |
+| 键盘/无障碍 | Tab → 「跳到主要内容」→ main；F1 打开快捷键说明；0 个图标按钮缺少可访问名称 |
+| 历史/剪贴板 | `Ctrl+H` 含刚完成的记录；`Ctrl+C` 复制 `1234567`；`Ctrl+V` `1,234 + 56` → `1,290` |
+| DPI/文本 | 100/125/150/175/200% 下 `main` 376、页面 440/440、0 越界；文本 150% 七页无横向溢出 |
+| 控制台 | 0 error / 0 exception |
+| 门禁 | Rust 246 项、前端 196 项；fmt/clippy/typecheck/lint/check:i18n/build 全绿 |
+| 未实测 | 中文输入法（本机未安装）、双屏混合 DPI（单活动桌面） |
+
+## 截图
+
+- `t18-light-zh-CN-basic.png`、`t18-dark-zh-CN-basic.png`、`t18-dark-en-US-basic.png`、`t18-light-en-US-basic.png`（440×820，`2 + 3 = 5`）
+- `t18-light-zh-CN-worksheets-150.png`（文本 150%，工作表竖向滚动）

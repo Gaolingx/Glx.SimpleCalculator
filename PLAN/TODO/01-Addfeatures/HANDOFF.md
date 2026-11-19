@@ -2,14 +2,14 @@
 
 | 项 | 内容 |
 |---|---|
-| 文档版本 | v0.1（调研完成，待评审） |
+| 文档版本 | v0.2（T18 完成，待 T19 发布收尾） |
 | 编写日期 | 2026-11-19 |
 | 仓库 | `E:\GitHub\Glx.SimpleCalculator` |
 | 说明 | 需求中提到的 `E:\GitHub\fork\Glx.SimpleCalculator` 不存在，按实际仓库路径落盘 |
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
-| 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T17 完成**（2026-11-19）：品牌图标、NSIS/MSI 与 WebView2 策略、体积优化完成；下一步 T18 QA 与文档 |
+| 当前代码状态 | Tauri 2 + React 19 应用完成，7 个页面、Rust 内核与 NSIS/MSI 打包；逐任务记录见 §1.3 |
+| 当前进度 | **T18 完成**（2026-11-19）：合并回归 20/20、README 与已知问题完成；下一步 T19 发布收尾 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -300,6 +300,16 @@ setx PATH "%PATH%;E:\node"
 - 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -- -D warnings` / `cargo test --workspace`（246 项）；`npm run typecheck` / `lint` / `test`（196 项）/ `check:i18n` / `build` 全绿。
 - 文档/QA：产物大小与 SHA-256、安装/卸载步骤与 MSI 限制记录于 `docs/qa/2026-11-19/README.md`。签名与自动更新不在本迭代（无证书，SmartScreen 可能提示）。
 
+**T18 实测记录（2026-11-19）**
+
+- 方式：release exe（`c910b06`，6,814,720 B，SHA-256 `eb15cdff…d3782fc`）+ WebView2 CDP 9225，Node 脚本驱动真实 IPC/设置/历史/系统剪贴板；视口 440×820，DPI 1/1.25/1.5/1.75/2 设备缩放，文本 150% 走 `--ui-scale`/`html[data-ui-scale]`。运行前后恢复设置、历史、汇率缓存、窗口状态与剪贴板。
+- 合并回归 **20/20 PASS**：基本 `2+3×4=14`；科学 DEG `sin(30)=0.5`；程序员 `255` → HEX `FF`/DEC `255`/OCT `377`/BIN `1111 1111`；统计 `1..10` 均值 `5.5`；换算 `1 km = 1,000 m`；汇率类别显示「ECB · 2026-11-18」；日期差 0 天、+1 天为 `2026年11月20日`；抵押月供 `4,890.17`；`Ctrl+H` 历史含本次记录；`Ctrl+C` 复制 `1234567`；`Ctrl+V` `1,234 + 56` → `1,290`。
+- 主题/语言：light/dark × zh-CN/en-US 即时切换；English 下页面标题 `Basic`、43 个按钮标签全英文、无裸键。键盘：Tab → 「跳到主要内容」→ main，F1 打开快捷键说明，图标按钮 0 个缺少可访问名称。
+- 布局：DPI 100–200% 下 `main` 376、页面 440/440、0 越界；文本 150% 七页 `scrollWidth=clientWidth=440`、`main` 344、0 越界；0 console error / 0 exception。
+- 未实测：中文输入法（本机 `Get-WinUserLanguageList` 为空）、双屏混合 DPI（单活动桌面）。MSI per-machine 仍需管理员会话复验（T17）。
+- 门禁复跑：Rust 246 项、前端 196 项；fmt/clippy/typecheck/lint/check:i18n/build 全绿；JS 415.79 kB（gzip 128.78 kB）。
+- 文档：根 `README.md` 重写（功能、环境、开发、门禁、打包、架构、数据路径、QA 链接、已知问题）；新增 `docs/qa/2026-11-19/T18-QA-MATRIX.md`（矩阵、检查表、限制）；QA README 增补 T18 段。截图 5 张：`t18-light-zh-CN-basic.png`、`t18-dark-zh-CN-basic.png`、`t18-dark-en-US-basic.png`、`t18-light-en-US-basic.png`、`t18-light-zh-CN-worksheets-150.png`。
+- 说明：标题栏 `DEV` 徽标为设计稿元素，100–115% 文本大小可见、≥120% 隐藏；是否在发布版移除留待 T19 决定。`docs/qa/2026-11-19/` 累计 T3–T18 证据约 3.1 MB，高于 §12.2 的 2 MB 建议值（T18 新增约 0.21 MB）。
 
 ### 1.4 参考截图 → 布局结论
 
@@ -823,7 +833,7 @@ src/i18n/locales/en-US/...（同构）
 | T15 | 工作表 | M8 | T3 | 注册表、抵押/油耗/租赁、通用表单与结果卡 | 黄金月供 ±0.01；字段级校验 | done |
 | T16 | 打磨：DPI/无障碍/性能 | M9 | T5–T15 | DPI 矩阵、文本缩放、键盘全流程、reduced-motion、性能采样 | 冷启动/输入延迟/IPC p95 | done |
 | T17 | 打包 | M9 | T16 | 图标、NSIS/MSI、WebView2 策略、体积优化 | 安装/卸载/启动 | done |
-| T18 | QA 与文档 | M9 | T16,T17 | QA 矩阵记录、截图归档、README、已知问题 | 检查表全勾；截图可追溯 | pending |
+| T18 | QA 与文档 | M9 | T16,T17 | QA 矩阵记录、截图归档、README、已知问题 | 检查表全勾；截图可追溯 | done |
 | T19 | 发布与收尾 | M9 | T18 | 版本号、发布说明、产物归档、清理、复盘 | 产物清单核对；工作区干净 | pending |
 
 **冲突与遗漏检查（T 表自审）**
@@ -988,8 +998,9 @@ npm run typecheck && npm run test
 - [x] 可访问性：键盘全流程、焦点顺序、跳转链接、F1 说明、aria、减少动效、强制色
 - [x] 性能：输入到绘制 <50ms、IPC p95 <15ms；冷启动见 T16 记录
 - [x] 图标（SVG/ico/png 多尺寸）、安装包（NSIS + MSI）、WebView2 bootstrapper 策略
-- [ ] 发布说明、README、截图、已知问题
-- [ ] QA 检查表逐项打勾
+- [x] README、截图、已知问题（`README.md`、`docs/qa/2026-11-19/T18-QA-MATRIX.md`）
+- [x] QA 检查表逐项打勾（T18 合并回归 20/20）
+- [ ] 发布说明（`docs/release/v0.1.0.md`，T19）
 
 **验收**
 - `npm run tauri build` 产物可安装、可卸载、启动正常
