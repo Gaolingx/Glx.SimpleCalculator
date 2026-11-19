@@ -11,7 +11,8 @@ body,
 }
 
 html {
-  font-size: 16px;
+  /* Windows Text size (100–150% effective) scales every rem-based dimension. */
+  font-size: calc(16px * var(--ui-scale, 1));
 }
 
 body {
@@ -91,5 +92,25 @@ p {
     transition-duration: 1ms !important;
     transition-delay: 0ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media (forced-colors: active) {
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    background-image: none !important;
+  }
+
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  button,
+  input {
+    border: 1px solid ButtonText;
   }
 }

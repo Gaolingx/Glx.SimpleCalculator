@@ -1,0 +1,21 @@
+{
+  "title": "键盘快捷键",
+  "description": "不使用鼠标也能完成主要操作；按 F1 可随时打开此说明。",
+  "calculator": "计算",
+  "app": "应用",
+  "digits": "输入数字",
+  "operators": "加、减、乘、除",
+  "equals": "求值",
+  "backspace": "退格",
+  "clear": "清除全部；Esc 同时关闭弹层",
+  "percent": "百分比",
+  "toggleSign": "切换正负号",
+  "reciprocal": "倒数",
+  "square": "平方",
+  "sqrt": "平方根",
+  "hexDigits": "输入十六进制数字（程序员模式）",
+  "copy": "复制原始值",
+  "paste": "粘贴并清洗输入",
+  "history": "打开历史记录",
+  "help": "打开快捷键说明"
+}

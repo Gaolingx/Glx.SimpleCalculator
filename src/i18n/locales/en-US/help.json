@@ -1,0 +1,21 @@
+{
+  "title": "Keyboard shortcuts",
+  "description": "The whole app works without a mouse. Press F1 to reopen this list.",
+  "calculator": "Calculator",
+  "app": "App",
+  "digits": "Enter digits",
+  "operators": "Add, subtract, multiply, divide",
+  "equals": "Evaluate",
+  "backspace": "Backspace",
+  "clear": "Clear all; Esc also closes overlays",
+  "percent": "Percent",
+  "toggleSign": "Toggle sign",
+  "reciprocal": "Reciprocal",
+  "square": "Square",
+  "sqrt": "Square root",
+  "hexDigits": "Enter hexadecimal digits (programmer mode)",
+  "copy": "Copy the raw value",
+  "paste": "Paste and sanitize input",
+  "history": "Open history",
+  "help": "Open this shortcut list"
+}

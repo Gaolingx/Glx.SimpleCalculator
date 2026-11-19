@@ -11,6 +11,7 @@ mod date;
 mod history;
 mod session;
 mod settings;
+mod ui_scale;
 mod units;
 mod worksheet;
 
@@ -50,6 +51,7 @@ pub fn run() {
             settings::settings_get,
             settings::settings_set,
             settings::settings_reset,
+            ui_scale::ui_scale_get,
             session::calc_command,
             session::session_select,
             session::session_reset,

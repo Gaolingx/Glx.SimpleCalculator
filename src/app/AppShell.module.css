@@ -5,6 +5,28 @@
   background: var(--color-bg);
 }
 
+.skipLink {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 70;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-btn);
+  background: var(--color-primary-fill);
+  color: var(--color-primary-fill-text);
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform var(--duration-fast) var(--ease-soft);
+}
+
+.skipLink:focus-visible {
+  transform: translateY(0);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .body {
   display: flex;
   flex: 1;

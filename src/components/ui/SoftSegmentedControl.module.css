@@ -57,3 +57,15 @@
 .segment:disabled {
   cursor: not-allowed;
 }
+
+/* Keep multi-option rows inside the compact window at 120–150% text size. */
+:global(html[data-ui-scale="large"]) .group {
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+:global(html[data-ui-scale="large"]) .segment {
+  overflow: hidden;
+  padding: 0.25rem 0.2rem;
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+}

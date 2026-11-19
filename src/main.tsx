@@ -3,7 +3,12 @@ import { createRoot } from "react-dom/client";
 
 import App from "./App";
 import { initI18n } from "./i18n";
-import { applyTheme, readStoredTheme } from "./lib";
+import {
+  applyTheme,
+  installUiScaleSync,
+  readStoredTheme,
+  syncUiScale,
+} from "./lib";
 import { useSettingsStore } from "./stores/settings";
 import "./styles/fonts.css";
 import "./styles/tokens.css";
@@ -24,6 +29,8 @@ async function bootstrap(): Promise<void> {
     </StrictMode>,
   );
   void useSettingsStore.getState().hydrate();
+  void syncUiScale();
+  installUiScaleSync();
 }
 
 void bootstrap().catch((error: unknown) => {

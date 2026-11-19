@@ -31,5 +31,6 @@
     "decimal": "DEC",
     "octal": "OCT",
     "binary": "BIN"
-  }
+  },
+  "shortcuts": "键盘快捷键（F1）"
 }

@@ -25,4 +25,11 @@ describe("ui store", () => {
     useUiStore.getState().toggleOverlay("settings");
     expect(useUiStore.getState().overlay).toBe("settings");
   });
+
+  it("tracks the shortcuts overlay", () => {
+    useUiStore.getState().toggleOverlay("help");
+    expect(useUiStore.getState().overlay).toBe("help");
+    useUiStore.getState().toggleOverlay("help");
+    expect(useUiStore.getState().overlay).toBeNull();
+  });
 });

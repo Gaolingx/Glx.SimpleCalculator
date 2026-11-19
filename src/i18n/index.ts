@@ -5,6 +5,7 @@ import enBasic from "./locales/en-US/basic.json";
 import enCommon from "./locales/en-US/common.json";
 import enDate from "./locales/en-US/date.json";
 import enErrors from "./locales/en-US/errors.json";
+import enHelp from "./locales/en-US/help.json";
 import enHistory from "./locales/en-US/history.json";
 import enMenu from "./locales/en-US/menu.json";
 import enProgrammer from "./locales/en-US/programmer.json";
@@ -17,6 +18,7 @@ import zhBasic from "./locales/zh-CN/basic.json";
 import zhCommon from "./locales/zh-CN/common.json";
 import zhDate from "./locales/zh-CN/date.json";
 import zhErrors from "./locales/zh-CN/errors.json";
+import zhHelp from "./locales/zh-CN/help.json";
 import zhHistory from "./locales/zh-CN/history.json";
 import zhMenu from "./locales/zh-CN/menu.json";
 import zhProgrammer from "./locales/zh-CN/programmer.json";
@@ -44,6 +46,7 @@ export const I18N_NAMESPACES = [
   "worksheets",
   "settings",
   "history",
+  "help",
   "errors",
 ] as const;
 
@@ -60,6 +63,7 @@ const resources = {
     worksheets: zhWorksheets,
     settings: zhSettings,
     history: zhHistory,
+    help: zhHelp,
     errors: zhErrors,
   },
   "en-US": {
@@ -74,6 +78,7 @@ const resources = {
     worksheets: enWorksheets,
     settings: enSettings,
     history: enHistory,
+    help: enHelp,
     errors: enErrors,
   },
 } as const;

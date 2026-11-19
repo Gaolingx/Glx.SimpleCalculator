@@ -30,6 +30,7 @@ export function SettingsSheet() {
   const { showToast } = useToast();
   const open = useUiStore((state) => state.overlay === "settings");
   const closeOverlay = useUiStore((state) => state.closeOverlay);
+  const openOverlay = useUiStore((state) => state.openOverlay);
   const settings = useSettingsStore((state) => state.settings);
   const saving = useSettingsStore((state) => state.saving);
   const error = useSettingsStore((state) => state.error);
@@ -201,6 +202,15 @@ export function SettingsSheet() {
             {t(`errors:${error.code}`)}
           </p>
         ) : null}
+
+        <SoftButton
+          variant="ghost"
+          fullWidth
+          aria-keyshortcuts="F1"
+          onClick={() => openOverlay("help")}
+        >
+          {t("settings:shortcuts")}
+        </SoftButton>
 
         <SoftButton variant="danger" fullWidth disabled={saving} onClick={handleReset}>
           {t("settings:resetDefaults")}

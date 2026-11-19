@@ -269,6 +269,11 @@
   font-size: var(--text-body);
 }
 
+/* Three Chinese labels per row no longer fit four-up at 120–150% text size. */
+:global(html[data-ui-scale="large"]) .functions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .notice {
   flex: none;
   color: var(--color-text-muted);

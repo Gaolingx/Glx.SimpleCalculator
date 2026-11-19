@@ -1,4 +1,5 @@
 import { useEffect, type ComponentType } from "react";
+import { useTranslation } from "react-i18next";
 
 import { HistoryDrawer } from "../components/layout/HistoryDrawer";
 import { NavRail } from "../components/layout/NavRail";
@@ -6,6 +7,7 @@ import { TitleBar } from "../components/layout/TitleBar";
 import { BasicPage } from "../features/basic/BasicPage";
 import { ConverterPage } from "../features/converter/ConverterPage";
 import { DateCalcPage } from "../features/datecalc/DateCalcPage";
+import { ShortcutsSheet } from "../features/help/ShortcutsSheet";
 import { ProgrammerPage } from "../features/programmer/ProgrammerPage";
 import { ScientificPage } from "../features/scientific/ScientificPage";
 import { SettingsSheet } from "../features/settings/SettingsSheet";
@@ -37,6 +39,7 @@ const MODE_BY_PAGE: Record<PageId, CalcMode> = {
 };
 
 export function AppShell() {
+  const { t } = useTranslation();
   const page = usePage();
   const overlay = useUiStore((state) => state.overlay);
   const toggleOverlay = useUiStore((state) => state.toggleOverlay);
@@ -47,6 +50,17 @@ export function AppShell() {
       if (event.ctrlKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === "h") {
         event.preventDefault();
         toggleOverlay("history");
+        return;
+      }
+      if (
+        event.key === "F1" &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey &&
+        !event.shiftKey
+      ) {
+        event.preventDefault();
+        toggleOverlay("help");
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -55,10 +69,26 @@ export function AppShell() {
 
   return (
     <div className={styles.shell}>
+      <a
+        className={styles.skipLink}
+        href="#main-content"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("main-content")?.focus();
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            document.getElementById("main-content")?.focus();
+          }
+        }}
+      >
+        {t("skipToContent")}
+      </a>
       <TitleBar />
       <div className={styles.body}>
         <NavRail page={page} />
-        <main className={styles.content}>
+        <main id="main-content" className={styles.content} tabIndex={-1}>
           <Page />
         </main>
       </div>
@@ -66,6 +96,7 @@ export function AppShell() {
         <HistoryDrawer mode={MODE_BY_PAGE[page]} onNavigate={navigate} />
       ) : null}
       <SettingsSheet />
+      <ShortcutsSheet />
     </div>
   );
 }

@@ -117,3 +117,10 @@
   color: #ffffff;
   filter: brightness(0.92);
 }
+
+/* At 120–150% text size the brand needs the width; history stays in the rail. */
+:global(html[data-ui-scale="large"]) .utility,
+:global(html[data-ui-scale="large"]) .separator,
+:global(html[data-ui-scale="large"]) .badge {
+  display: none;
+}

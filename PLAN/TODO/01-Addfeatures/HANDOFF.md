@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T15 完成**（2026-11-19）：工作表注册表与抵押/油耗/租赁已打通；下一步 T16 |
+| 当前进度 | **T16 完成**（2026-11-19）：OS 文本缩放/无障碍/性能打磨完成；下一步 T17 打包 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -276,6 +276,18 @@ setx PATH "%PATH%;E:\node"
 - 截图：`docs/qa/2026-11-19/t15-light-zh-CN-worksheet-mortgage.png`、`t15-light-zh-CN-worksheet-fuel.png`、`t15-dark-en-US-worksheet-lease.png`、`t15-dark-en-US-worksheet-lease-invalid.png`。
 
 
+**T16 实测记录（2026-11-19）**
+
+- 文本缩放桥接：新增 `src-tauri/src/ui_scale.rs`，读取 `HKCU\Software\Microsoft\Accessibility\TextScaleFactor`（REG_DWORD，兼容字符串；缺省 100，钳制 100–225），新增 `ui_scale_get()` → `UiScale {textScale}`。前端 `src/lib/uiScale.ts` 归一化后钳制到 **100–150%**，写入 `--ui-scale` 与 `html[data-ui-scale]`；根字号改为 `calc(16px * var(--ui-scale, 1))`，全部 rem 排版/控件随之放大。启动与窗口重新获得焦点时重读（Windows 文本大小运行期变更可生效）；浏览器预览回退 1.0。上限取 150% 是因为 440px 紧凑窗口在 200–225% 下已无法保证 6 列键盘可读，作为已知约束写入 §4.5。
+- 缩放布局：≥120%（`data-ui-scale="large"`）时科学/程序员键盘 6→4 列、统计函数 4→3 列，分段控件收紧横向内边距/字号，标题栏隐藏重复的历史按钮与 dev 徽标；日期弹层宽度 `min(19.5rem, 100vw - 1rem)`、右键菜单 `min(18rem, 100vw - 1rem)`，设置/历史弹层保持视口内。页面只做竖向滚动，150% 下科学 1450px、程序员 1280px、统计 906px、工作表 970px 内容高，无横向溢出、无标签截断。
+- 无障碍：新增 `ShortcutsSheet`（F1 打开/关闭，与设置内入口共用；`SoftDialog` 焦点陷阱、Esc、遮罩关闭）；新增「跳到主要内容」跳转链接（Enter/Space 聚焦 `main`，`main` 带 `tabindex="-1"`）；`forced-colors` 下移除阴影/渐变并使用 `Highlight` 焦点轮廓；`prefers-reduced-motion` 沿用 base.css 全局降级；F1/历史/导航/快捷键说明均走 i18n（新增 `help` 命名空间）。
+- 性能（Tauri dev + WebView2 CDP，调试构建）：`calc_command` 30 次 mean 2.29ms、p95 3.0ms、max 3.5ms；按键到绘制 8 次 16.0–17.5ms（目标 <50ms）；导航 DCL 211ms、load 213ms、FCP 308ms（dev server）。release 冷启动（进程启动 → `main` 可交互，3 次）：首次 1.45s、后续 0.74s / 0.70s，满足 <1.5s；页面内 DCL/load 123–153ms。
+- 测试：Rust 246 项（calc-core 202；shell 44 = 41 + `ui_scale` 3）；前端 196 项（新增 `lib/uiScale` 5、`ShortcutsSheet` 2、ui store 1）。
+- 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -- -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 415.79 kB（gzip 128.78 kB）、CSS 58.82 kB（gzip 9.03 kB），仍在 250 kB gzip 预算内。
+- QA（Tauri dev + WebView2 CDP，440×820）：系统缩放 100/125/150/175/200% 下 `documentElement` 恒为 440/440、820/820，`main` 376/776，无横向溢出与按钮越界；文本 100/125/150% × 7 页全部无横向溢出、无截断标签；en-US 150% 的 `Mortgage/Fuel/Lease` 与 `Difference/Add or subtract` 同样完整；150% 下日期弹层 416px、设置弹层 368px 均在视口内；Tab→「跳到主要内容」→ main 聚焦、F1 打开并 Esc 关闭说明、Ctrl+H 打开历史均通过；0 console error。当前机器未设置 TextScaleFactor（命令返回 1.0），125/150% 通过同一 CSS 变量路径验证，未修改系统设置。
+- 截图：`docs/qa/2026-11-19/t16-light-zh-CN-shortcuts.png`、`t16-light-zh-CN-basic-100.png`、`t16-light-zh-CN-scientific-150.png`、`t16-light-zh-CN-programmer-150.png`、`t16-dark-zh-CN-basic-150.png`、`t16-light-zh-CN-datepicker-150.png`、`t16-light-en-US-shortcuts-150.png`、`t16-light-en-US-scientific-150.png`、`t16-dark-en-US-worksheets-150.png`。
+
+
 ### 1.4 参考截图 → 布局结论
 
 - 自定义标题栏：左侧应用名 + `dev` 徽标，右侧最小化/最大化/关闭；内容区可拖拽。
@@ -498,6 +510,7 @@ pub enum CalcCommand {
 > T13 新增 `currency_status()` → `CurrencyStatus` 与 `currency_refresh()` → `CurrencyStatus`。缓存位于 `currency-cache.json`（TTL 24h），启动后仅过期时后台刷新；手动刷新 5s 内最多一次（冷却期返回当前状态）。刷新失败返回 `NETWORK_ERROR` 且保留旧缓存；`convert_unit` 的货币分支自动注入缓存汇率，无缓存仍返回 `CURRENCY_OFFLINE`。
 > T14 新增纯函数 `date_diff(from,to)` → `DateDifference {years,months,days,totalDays,totalWeeks}` 与 `date_add(date,years,months,weeks,days)` → `DateShift {date}`。日期限 `0001-01-01`–`9999-12-31`；先按月（月末夹取）再加天/周；越界为 `OVERFLOW`，非法日期/数量为 `INVALID_INPUT`。
 > T15 新增 `worksheet_catalog()` → `WorksheetCatalog {worksheets[{id,fields[{id,kind,min,max,defaultValue}],results[{id,kind}]}]}` 与 `worksheet_compute(sheet, inputs)` → `WorksheetResult {values[{id,value}]}`。`kind` 为 `decimal|integer`（字段）与 `money|decimal`（结果）；字段错误 `INVALID_INPUT` 的 `args[0]` 为字段 id，跨字段规则为 `residualBelowPrice`。金额结果已按 2 位小数四舍五入，`value` 仍为未分组规范值。
+> T16 新增 `ui_scale_get()` → `UiScale {textScale}`；`textScale` 为 Windows「辅助功能 → 文本大小」百分比的 1/100（1.0 = 100%），非 Windows 或缺省为 1.0。前端负责钳制到 100–150% 并写入 `--ui-scale`，Rust 侧只做注册表读取与 100–225 范围收敛。
 
 契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
@@ -716,6 +729,7 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 - 字体栈：`Inter`（本地 woff2，latin，400/500/600/700）→ `Nunito` → `Segoe UI` → `Microsoft YaHei UI` → `PingFang SC` → `Noto Sans SC` → sans-serif；数字用 `font-variant-numeric: tabular-nums`。
 - 验证矩阵：缩放 100% / 125% / 150% / 175% / 200%，以及双屏不同缩放下拖动窗口。
 - 最小点击目标 36×36，主按键 ≥56 高。
+- Windows「辅助功能 → 文本大小」由 `ui_scale_get` 读取并作用于根字号（rem 全量放大），有效范围钳制 100–150%；≥120% 时科学/程序员键盘 6→4 列、统计函数 4→3 列，标题栏隐藏重复历史按钮与 dev 徽标。440px 紧凑窗口不承诺 200–225% 文本大小下的完整 6 列布局。
 
 ### 4.6 键盘与可访问性
 
@@ -731,7 +745,8 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 | `Ctrl+C` / `Ctrl+V` | 复制当前原始值 / 粘贴 |
 | `Ctrl+H` | 历史抽屉 |
 | `Ctrl+1..5`（P2） | 切换模式 |
-| `F1` | 快捷键说明 |
+| `F1` | 快捷键说明（T16 已实现，设置内亦有入口） |
+| `Tab` → `Enter` | 首个焦点为「跳到主要内容」，聚焦 `main` 后继续 Tab 进入页面 |
 
 - 焦点环统一使用 `--focus-ring`；弹层焦点陷阱；结果区 `aria-live="polite"` 且输入时防抖（避免读屏逐字朗读）。
 - 错误信息同时有视觉与文本（颜色 + 文案），不依赖颜色单独传达。
@@ -793,7 +808,7 @@ src/i18n/locales/en-US/...（同构）
 | T13 | 汇率 | M6 | T12 | ECB 拉取/解析/缓存/TTL/离线 UI/手动刷新 | 断网缓存；5s 限速；交叉汇率 | done |
 | T14 | 日期计算 | M7 | T3 | 日期差/加减、`DatePicker`、本地化格式 | 闰年/月末夹取单测 | done |
 | T15 | 工作表 | M8 | T3 | 注册表、抵押/油耗/租赁、通用表单与结果卡 | 黄金月供 ±0.01；字段级校验 | done |
-| T16 | 打磨：DPI/无障碍/性能 | M9 | T5–T15 | DPI 矩阵、键盘全流程、reduced-motion、性能采样 | 冷启动/输入延迟/IPC p95 | pending |
+| T16 | 打磨：DPI/无障碍/性能 | M9 | T5–T15 | DPI 矩阵、文本缩放、键盘全流程、reduced-motion、性能采样 | 冷启动/输入延迟/IPC p95 | done |
 | T17 | 打包 | M9 | T16 | 图标、NSIS/MSI、WebView2 策略、体积优化 | 安装/卸载/启动 | pending |
 | T18 | QA 与文档 | M9 | T16,T17 | QA 矩阵记录、截图归档、README、已知问题 | 检查表全勾；截图可追溯 | pending |
 | T19 | 发布与收尾 | M9 | T18 | 版本号、发布说明、产物归档、清理、复盘 | 产物清单核对；工作区干净 | pending |
@@ -954,10 +969,11 @@ npm run typecheck && npm run test
 ### M9 打磨与发布（3–4 人日）
 
 **任务**
-- [ ] DPI 全矩阵巡检（100/125/150/175/200，双屏拖动）
-- [ ] 两主题 × 两语言视觉回归（截图留档）
-- [ ] 可访问性：键盘全流程、焦点顺序、aria、减少动效
-- [ ] 性能：冷启动 <1.5s、输入到绘制 <50ms、IPC p95 <15ms
+- [x] DPI 全矩阵巡检（100/125/150/175/200；单活动桌面，双屏拖动未实测）
+- [x] 两主题 × 两语言视觉回归（截图留档）
+- [x] Windows 文本大小 100/125/150%（根字号 + 键盘重排 + 弹层视口约束）
+- [x] 可访问性：键盘全流程、焦点顺序、跳转链接、F1 说明、aria、减少动效、强制色
+- [x] 性能：输入到绘制 <50ms、IPC p95 <15ms；冷启动见 T16 记录
 - [ ] 图标（SVG/ico/png 多尺寸）、安装包（NSIS + MSI）、WebView2 bootstrapper 策略
 - [ ] 发布说明、README、截图、已知问题
 - [ ] QA 检查表逐项打勾
@@ -1198,6 +1214,7 @@ rm -rf src-tauri/target/release/bundle
 | 25 | 3.5 / 6.0 T12 | 货币换算在 T12 尚无汇率数据，容易与“11 类全部可用”混淆 | T12 交付 11 类元数据、纯交叉换算与 fixture 测试；`convert_unit` 对货币返回 `CURRENCY_OFFLINE`，页面提示联网后更新；T13 注入 ECB 缓存后启用。负值策略同时明确：温度/速度/角度/汇率允许，长度/面积/体积/质量/压力/功率/时间拒绝 |
 | 26 | 3.10 / T14 | 日期差的方向、按月加减“先夹取还是后夹取”、复制格式未定义 | T14 明确：分量在较早→较晚区间计算且非负，`totalDays` 带符号、`totalWeeks` 截断；先按月夹取月末再加天/周；日期限 0001–9999，越界 `OVERFLOW`；复制日期用 ISO、结果区用本地化长格式、触发器用本地化数字短格式 |
 | 27 | 3.5 / 3.6 / T15 | 工作表三公式与金额口径、租赁税费/利率含义、字段校验归属未定义 | T15 明确：抵押用等额本息年金公式（`r=年利率/1200`、`n=年数×12`，零利率回退 `P/n`），总还款=四舍五入月供×期数、总利息=总还款−本金（负值归零）；油耗按 `L/100km` 计算总油耗与费用，并按精确加仑/英里定义给出 `mpg(US/UK)`；租赁 `moneyFactor=APR/2400`、税按税率乘月租、总成本=月租×月数、利息明细=月租中的租金部分×月数，且残值必须小于车价；字段边界由注册表声明、前端预校验、内核二次校验，金额最终 2 位小数 `MidpointAwayFromZero` |
+| 28 | 4.5 / 4.6 / T16 | Windows 文本大小上限、紧凑布局重排、标题栏取舍与 F1 说明未定义 | T16 明确：读取 `TextScaleFactor`（100–225）并钳制到 100–150%；根字号驱动全部 rem 尺寸；≥120% 时科学/程序员键盘 6→4、统计函数 4→3，标题栏隐藏重复历史按钮与 dev 徽标，分段控件收紧内边距；日期/右键弹层不超过视口；F1 快捷键说明与「跳到主要内容」纳入无障碍，`forced-colors` 使用系统色焦点轮廓 |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 

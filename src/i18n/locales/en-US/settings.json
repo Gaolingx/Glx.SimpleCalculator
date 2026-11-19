@@ -31,5 +31,6 @@
     "decimal": "DEC",
     "octal": "OCT",
     "binary": "BIN"
-  }
+  },
+  "shortcuts": "Keyboard shortcuts (F1)"
 }

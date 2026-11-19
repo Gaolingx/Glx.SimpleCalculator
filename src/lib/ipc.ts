@@ -407,6 +407,27 @@ export async function resetSettings(): Promise<AppSettings> {
   return normalizeSettings(await invokeCommand<unknown>("settings_reset"));
 }
 
+/** Mirrors `src-tauri/src/ui_scale.rs::UiScale`. */
+export interface UiScale {
+  /** Windows Accessibility → Text size; 1.0 = 100%. */
+  textScale: number;
+}
+
+function normalizeUiScale(value: unknown): UiScale {
+  const textScale =
+    isRecord(value) && typeof value.textScale === "number" && Number.isFinite(value.textScale)
+      ? value.textScale
+      : 1;
+  return { textScale };
+}
+
+export async function fetchUiScale(): Promise<UiScale> {
+  if (!isTauriRuntime()) {
+    return { textScale: 1 };
+  }
+  return normalizeUiScale(await invokeCommand<unknown>("ui_scale_get"));
+}
+
 const PREVIEW_HISTORY_KEY = "glx.history.preview";
 
 function normalizeHistoryEntry(value: unknown): HistoryEntry | null {

@@ -29,6 +29,7 @@ export {
   deleteHistory,
   emptyCalcView,
   fetchHistory,
+  fetchUiScale,
   isCalcMode,
   normalizeCalcView,
   normalizeHistory,
@@ -47,8 +48,19 @@ export type {
   HistoryInput,
   MemoryOp,
   ProgrammerView,
+  UiScale,
   UnaryOp,
 } from "./ipc";
+export {
+  LARGE_SCALE_THRESHOLD,
+  TEXT_SCALE_MAX,
+  TEXT_SCALE_MIN,
+  applyUiScale,
+  currentUiScale,
+  installUiScaleSync,
+  normalizeTextScale,
+  syncUiScale,
+} from "./uiScale";
 export { isCompletedCalculation, recallCommand } from "./history";
 export { MAX_PASTE_CHARS, cleanPaste, pasteCommands } from "./clipboard";
 export type { PasteFailure, PasteRadix, PasteResult } from "./clipboard";

@@ -22,3 +22,8 @@
     font-size: 0.85rem;
   }
 }
+
+/* Text size ≥120% leaves too little width for six columns; reflow to four. */
+:global(html[data-ui-scale="large"]) .keypad {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}

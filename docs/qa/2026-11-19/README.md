@@ -240,3 +240,41 @@
 - `t15-light-zh-CN-worksheet-fuel.png`（油耗与 mpg 明细）
 - `t15-dark-en-US-worksheet-lease.png`（租赁两列表单）
 - `t15-dark-en-US-worksheet-lease-invalid.png`（残值跨字段校验）
+
+# T16 DPI / 无障碍 / 性能 — 2026-11-19
+
+- 方式：`cargo run` 启动 debug 应用，`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`，Node + CDP 直接驱动真实 WebView2（真实 IPC/设置/i18n）；视口 `Emulation.setDeviceMetricsOverride` 固定 440×820。
+- 文本缩放：本机未设置 `HKCU\Software\Microsoft\Accessibility\TextScaleFactor`，`ui_scale_get` 返回 `{textScale: 1.0}`；125%/150% 通过写入同一 `--ui-scale` 与 `html[data-ui-scale]` 变量路径验证（未修改系统设置）。release 冷启动由 `target/release/glx-calculator.exe` 单独测量。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 系统缩放 | 100/125/150/175/200%：`documentElement` 440/440、820/820，`main` 376/776，无横向溢出、无控件越界 |
+| 文本 100% | 7 页 `page.scrollWidth = clientWidth`，无截断标签 |
+| 文本 125% | 7 页无横向溢出；科学/程序员键盘 6→4 列、统计 4→3 列，页面按需竖向滚动 |
+| 文本 150% | 7 页无横向溢出、无截断标签；科学 1450px、程序员 1280px、统计 906px、工作表 970px 内容高；日期弹层 416px、设置弹层 368px 均在 440 视口内 |
+| en-US 150% | `Mortgage/Fuel/Lease`、`Difference/Add or subtract` 等长标签完整显示，7 页无溢出/截断 |
+| 键盘 | Tab → 「跳到主要内容」→ Enter 聚焦 `main`；F1 打开快捷键说明、Esc 关闭；Ctrl+H 打开历史 |
+| IPC | `calc_command` 30 次 mean 2.29ms、p95 3.0ms、max 3.5ms |
+| 输入延迟 | 合成按键 → `calc-value` 变更后下一帧：8 次 16.0–17.5ms |
+| 冷启动 | release：进程启动 → `main` 可交互 首次 1.45s、后续 0.74s / 0.70s；页面 DCL/load 123–153ms |
+| 控制台 | 0 error |
+| 测试 | 前端 196 项、Rust 246 项通过 |
+
+## 说明
+
+- 文本缩放有效上限 150%：440px 紧凑窗口在 200–225% 下无法保证 6 列键盘可读；该取舍已写入 HANDOFF §4.5/自审 #28。
+- 双屏不同缩放拖动未实测（当前为单活动桌面）；DPI 矩阵通过 CDP 设备缩放模拟完成。
+
+## 截图
+
+- `t16-light-zh-CN-shortcuts.png`（F1 说明，100%）
+- `t16-light-zh-CN-basic-100.png`（基准布局）
+- `t16-light-zh-CN-scientific-150.png`（150% 四列重排、F-E 换行）
+- `t16-light-zh-CN-programmer-150.png`（150% 字宽控件与位网格）
+- `t16-dark-zh-CN-basic-150.png`（深色 150%）
+- `t16-light-zh-CN-datepicker-150.png`（150% 日历弹层，416px）
+- `t16-light-en-US-shortcuts-150.png`（英文 150% 说明）
+- `t16-light-en-US-scientific-150.png`（英文 150% 科学型）
+- `t16-dark-en-US-worksheets-150.png`（英文/深色 150% 工作表）

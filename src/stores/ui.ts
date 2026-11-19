@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type OverlayId = "settings" | "history";
+export type OverlayId = "settings" | "history" | "help";
 
 interface UiState {
   overlay: OverlayId | null;
