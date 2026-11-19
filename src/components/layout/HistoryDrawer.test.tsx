@@ -52,11 +52,11 @@ function entry(patch: Partial<HistoryEntry> = {}): HistoryEntry {
   };
 }
 
-function renderDrawer() {
+function renderDrawer(mode: "basic" | "scientific" = "basic") {
   const onNavigate = vi.fn();
   render(
     <ToastProvider>
-      <HistoryDrawer mode="basic" onNavigate={onNavigate} />
+      <HistoryDrawer mode={mode} onNavigate={onNavigate} />
     </ToastProvider>,
   );
   return onNavigate;
@@ -192,5 +192,40 @@ describe("HistoryDrawer", () => {
     );
     await waitFor(() => expect(onNavigate).toHaveBeenCalledWith("basic"));
     await waitFor(() => expect(useUiStore.getState().overlay).toBeNull());
+  });
+
+  it("reapplies the angle unit when restoring a scientific entry", async () => {
+    useSettingsStore.setState({
+      settings: { ...DEFAULT_SETTINGS, angleUnit: "rad" },
+    });
+    backend.fetchHistory.mockResolvedValue([
+      entry({
+        id: "s",
+        mode: "scientific",
+        expression: "sin(30) =",
+        value: "0.5",
+      }),
+    ]);
+    renderDrawer("scientific");
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: i18n.t("history:restoreEntry", { expression: "sin(30) =" }),
+      }),
+    );
+
+    await waitFor(() =>
+      expect(backend.calcCommand).toHaveBeenCalledWith({
+        type: "recall",
+        expression: "sin(30) =",
+        value: "0.5",
+      }),
+    );
+    await waitFor(() =>
+      expect(backend.calcCommand).toHaveBeenCalledWith({
+        type: "setAngleUnit",
+        unit: "rad",
+      }),
+    );
   });
 });

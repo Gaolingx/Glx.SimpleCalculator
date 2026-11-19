@@ -10,25 +10,57 @@ use calc_core::{CalcCommand, CalcView, Engine, Mode};
 use tauri::{State, Window};
 
 #[derive(Default)]
-pub struct SessionMap(Mutex<HashMap<String, Engine>>);
+struct WindowSessions {
+    active: Option<Mode>,
+    engines: HashMap<Mode, Engine>,
+}
+
+impl WindowSessions {
+    fn engine(&mut self) -> &mut Engine {
+        let mode = self.active.unwrap_or(Mode::Basic);
+        self.engines
+            .entry(mode)
+            .or_insert_with(|| Engine::new(mode))
+    }
+}
+
+#[derive(Default)]
+pub struct SessionMap(Mutex<HashMap<String, WindowSessions>>);
 
 impl SessionMap {
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Activates (and creates on first use) the session for `mode`, matching the
+    /// frontend's per-mode view mirror.
+    pub fn select(&self, window: &str, mode: Mode) -> CalcView {
+        let mut sessions = self.lock();
+        let session = sessions.entry(window.to_owned()).or_default();
+        session.active = Some(mode);
+        session
+            .engines
+            .entry(mode)
+            .or_insert_with(|| Engine::new(mode))
+            .view()
+    }
+
     pub fn apply(&self, window: &str, command: CalcCommand) -> CalcView {
         let mut sessions = self.lock();
         sessions
             .entry(window.to_owned())
-            .or_insert_with(|| Engine::new(Mode::Basic))
+            .or_default()
+            .engine()
             .apply(command)
     }
 
     pub fn reset(&self, window: &str, mode: Mode) -> CalcView {
         let mut sessions = self.lock();
-        let engine = sessions
-            .entry(window.to_owned())
+        let session = sessions.entry(window.to_owned()).or_default();
+        session.active = Some(mode);
+        let engine = session
+            .engines
+            .entry(mode)
             .or_insert_with(|| Engine::new(mode));
         *engine = Engine::new(mode);
         engine.view()
@@ -38,7 +70,7 @@ impl SessionMap {
         self.lock().remove(window);
     }
 
-    fn lock(&self) -> MutexGuard<'_, HashMap<String, Engine>> {
+    fn lock(&self) -> MutexGuard<'_, HashMap<String, WindowSessions>> {
         self.0
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -52,6 +84,15 @@ pub fn calc_command(
     cmd: CalcCommand,
 ) -> Result<CalcView, calc_core::ErrorInfo> {
     Ok(state.apply(window.label(), cmd))
+}
+
+#[tauri::command]
+pub fn session_select(
+    state: State<'_, SessionMap>,
+    window: Window,
+    mode: Mode,
+) -> Result<CalcView, calc_core::ErrorInfo> {
+    Ok(state.select(window.label(), mode))
 }
 
 #[tauri::command]
@@ -82,6 +123,19 @@ mod tests {
 
         assert_eq!(sessions.apply("main", digit(4)).value, "1234");
         assert_eq!(sessions.apply("secondary", digit(8)).value, "98");
+    }
+
+    #[test]
+    fn each_mode_keeps_its_own_engine() {
+        let sessions = SessionMap::new();
+        sessions.apply("main", digit(1));
+        sessions.apply("main", digit(2));
+
+        assert_eq!(sessions.select("main", Mode::Scientific).value, "");
+        sessions.apply("main", digit(5));
+
+        assert_eq!(sessions.select("main", Mode::Basic).value, "12");
+        assert_eq!(sessions.select("main", Mode::Scientific).value, "5");
     }
 
     #[test]

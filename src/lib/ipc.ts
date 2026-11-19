@@ -147,6 +147,7 @@ export type CalcCommand =
   | { type: "closeGroup" }
   | { type: "constant"; id: ConstantId }
   | { type: "toggleBit"; bit: number }
+  | { type: "random" }
   | { type: "setExpression"; text: string }
   | { type: "recall"; expression: string; value: string };
 
@@ -268,6 +269,11 @@ export function normalizeCalcView(value: unknown): CalcView {
 
 export async function calcCommand(command: CalcCommand): Promise<CalcView> {
   return normalizeCalcView(await invokeCommand<unknown>("calc_command", { cmd: command }));
+}
+
+/** Activates the per-mode session, creating it on first use. */
+export async function selectSession(mode: CalcMode = "basic"): Promise<CalcView> {
+  return normalizeCalcView(await invokeCommand<unknown>("session_select", { mode }));
 }
 
 export async function resetSession(mode: CalcMode = "basic"): Promise<CalcView> {

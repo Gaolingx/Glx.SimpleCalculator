@@ -4,15 +4,13 @@
 //! [`crate::ops`]. Precedence: unary sign < `^` < `* /` < `+ -`; `^` is
 //! right-associative and `%` is a postfix divide-by-100.
 
-use rust_decimal::Decimal;
-
 use crate::command::BinaryOp;
 use crate::error::{CalcResult, ErrorCode, ErrorInfo};
-use crate::value;
+use crate::value::{self, Number};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    Number(Decimal),
+    Number(Number),
     Op(BinaryOp),
     Percent,
     OpenGroup,
@@ -21,7 +19,7 @@ pub enum Token {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
-    Number(Decimal),
+    Number(Number),
     Negate(Box<Expr>),
     Percent(Box<Expr>),
     Binary(BinaryOp, Box<Expr>, Box<Expr>),
@@ -51,8 +49,24 @@ pub fn tokenize(text: &str) -> CalcResult<Vec<Token>> {
             while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
                 i += 1;
             }
+            // Exponent notation (`1.5e3`) keeps pasted E-notation values intact.
+            if i < chars.len() && matches!(chars[i], 'e' | 'E') {
+                let mut end = i + 1;
+                if end < chars.len() && matches!(chars[end], '+' | '-') {
+                    end += 1;
+                }
+                let digits = end;
+                while end < chars.len() && chars[end].is_ascii_digit() {
+                    end += 1;
+                }
+                if end > digits {
+                    i = end;
+                }
+            }
             let raw: String = chars[start..i].iter().collect();
-            tokens.push(Token::Number(value::parse(&raw).map_err(|_| syntax())?));
+            tokens.push(Token::Number(
+                value::parse_number(&raw).map_err(|_| syntax())?,
+            ));
             continue;
         }
         match ch {
@@ -96,7 +110,7 @@ pub fn format_tokens(tokens: &[Token]) -> String {
                 if index > 0 && needs_space(tokens, index) {
                     out.push(' ');
                 }
-                out.push_str(&value::canonical(*n));
+                out.push_str(&n.canonical());
             }
             Token::Op(op) => {
                 if !out.is_empty() {
@@ -229,10 +243,15 @@ impl Parser<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rust_decimal::Decimal;
     use std::str::FromStr;
 
     fn d(raw: &str) -> Decimal {
         Decimal::from_str(raw).unwrap()
+    }
+
+    fn n(raw: &str) -> Number {
+        Number::Decimal(d(raw))
     }
 
     #[test]
@@ -241,13 +260,20 @@ mod tests {
         assert_eq!(
             tokens,
             vec![
-                Token::Number(d("1")),
+                Token::Number(n("1")),
                 Token::Op(BinaryOp::Add),
-                Token::Number(d("2")),
+                Token::Number(n("2")),
                 Token::Op(BinaryOp::Multiply),
-                Token::Number(d("3")),
+                Token::Number(n("3")),
             ]
         );
+    }
+
+    #[test]
+    fn tokenizes_exponent_notation() {
+        let tokens = tokenize("1.5e3+2").unwrap();
+        assert_eq!(tokens[0], Token::Number(n("1500")));
+        assert_eq!(tokens[2], Token::Number(n("2")));
     }
 
     #[test]

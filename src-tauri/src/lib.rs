@@ -39,6 +39,7 @@ pub fn run() {
             settings::settings_set,
             settings::settings_reset,
             session::calc_command,
+            session::session_select,
             session::session_reset,
             history::history_list,
             history::history_add,

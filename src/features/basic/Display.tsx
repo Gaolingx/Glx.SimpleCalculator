@@ -14,6 +14,8 @@ export interface DisplayProps {
   grouping: boolean;
   memory: boolean;
   onCopy: () => void;
+  /** Scientific-mode F-E toggle. */
+  notation?: "auto" | "scientific";
 }
 
 const SIZE_STEPS: ReadonlyArray<readonly [number, string]> = [
@@ -39,9 +41,10 @@ export function Display({
   grouping,
   memory,
   onCopy,
+  notation = "auto",
 }: DisplayProps) {
   const { t } = useTranslation();
-  const displayValue = value ? formatNumber(value, { grouping }) : "0";
+  const displayValue = value ? formatNumber(value, { grouping, notation }) : "0";
   const errorText = error ? t(`errors:${error}`) : "";
   const mainText = errorText || displayValue;
   const formattedExpression = formatExpression(expression, grouping);

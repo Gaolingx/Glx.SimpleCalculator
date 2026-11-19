@@ -6,11 +6,65 @@
 use std::str::FromStr;
 
 use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive;
 
 use crate::error::{CalcResult, ErrorCode, ErrorInfo};
 
 /// Upper bound for a single pasted expression (HANDOFF §3.9).
 pub const MAX_INPUT_CHARS: usize = 1000;
+
+/// A session value.
+///
+/// Basic arithmetic stays on `Decimal` so `0.1 + 0.2` remains exact. Scientific
+/// functions (trigonometry, logarithms, non-integer powers) follow the f64 path
+/// documented in HANDOFF §3.5, which also lets factorial reach `170!` beyond the
+/// 96-bit Decimal range. Mixing both promotes to f64.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Number {
+    Decimal(Decimal),
+    Float(f64),
+}
+
+impl From<Decimal> for Number {
+    fn from(value: Decimal) -> Self {
+        Self::Decimal(value)
+    }
+}
+
+impl Number {
+    pub fn to_f64(self) -> f64 {
+        match self {
+            Self::Decimal(value) => value.to_f64().unwrap_or(0.0),
+            Self::Float(value) => value,
+        }
+    }
+
+    pub fn is_zero(self) -> bool {
+        match self {
+            Self::Decimal(value) => value.is_zero(),
+            Self::Float(value) => value == 0.0,
+        }
+    }
+
+    /// Canonical raw string; display grouping stays in the frontend.
+    pub fn canonical(self) -> String {
+        match self {
+            Self::Decimal(value) => canonical(value),
+            Self::Float(value) => canonical_float(value),
+        }
+    }
+}
+
+impl std::ops::Neg for Number {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        match self {
+            Self::Decimal(value) => Self::Decimal(-value),
+            Self::Float(value) => Self::Float(-value),
+        }
+    }
+}
 
 /// Magnitude beyond which the session reports `Overflow` instead of relying on
 /// Decimal saturation. Display-level limits are a frontend concern.
@@ -36,6 +90,23 @@ pub fn parse(raw: &str) -> CalcResult<Decimal> {
     Decimal::from_str(&cleaned)
         .or_else(|_| Decimal::from_scientific(&cleaned))
         .map_err(|_| ErrorInfo::new(ErrorCode::InvalidInput))
+}
+
+/// Parse user text into a [`Number`], preferring exact Decimal values and
+/// falling back to f64 for magnitudes Decimal cannot represent (`170!`).
+pub fn parse_number(raw: &str) -> CalcResult<Number> {
+    let cleaned = normalize_input(raw)?;
+    if cleaned.is_empty() {
+        return Err(ErrorInfo::new(ErrorCode::InvalidInput));
+    }
+    if let Ok(value) = Decimal::from_str(&cleaned).or_else(|_| Decimal::from_scientific(&cleaned)) {
+        return Ok(Number::Decimal(value));
+    }
+    match cleaned.parse::<f64>() {
+        Ok(value) if value.is_finite() => Ok(Number::Float(value)),
+        Ok(_) => Err(ErrorInfo::new(ErrorCode::Overflow)),
+        Err(_) => Err(ErrorInfo::new(ErrorCode::InvalidInput)),
+    }
 }
 
 /// Strip grouping/whitespace and map typographic characters to ASCII.
@@ -70,6 +141,34 @@ pub fn normalize_input(raw: &str) -> CalcResult<String> {
 /// in the fractional part (`2.50` -> `2.5`, `3.000` -> `3`).
 pub fn canonical(value: Decimal) -> String {
     value.normalize().to_string()
+}
+
+/// Canonical f64 rendering: 15 significant digits (HANDOFF §3.5), plain
+/// notation inside `[1e-15, 1e16)` and E notation outside it so the frontend
+/// can format the mantissa without re-deriving the exponent.
+pub fn canonical_float(value: f64) -> String {
+    if !value.is_finite() || value == 0.0 {
+        return "0".to_owned();
+    }
+
+    let rounded: f64 = format!("{value:.14e}").parse().unwrap_or(value);
+    let magnitude = rounded.abs();
+    if magnitude >= 1e16 || magnitude < 1e-15 {
+        let text = format!("{rounded:.14e}");
+        let (mantissa, exponent) = text.split_once('e').unwrap_or((&text, "0"));
+        format!("{}e{exponent}", trim_zeros(mantissa))
+    } else {
+        let exponent = magnitude.log10().floor() as i32;
+        let decimals = (14 - exponent).max(0) as usize;
+        trim_zeros(&format!("{rounded:.decimals$}"))
+    }
+}
+
+fn trim_zeros(text: &str) -> String {
+    if !text.contains('.') {
+        return text.to_owned();
+    }
+    text.trim_end_matches('0').trim_end_matches('.').to_owned()
 }
 
 pub fn is_zero(value: Decimal) -> bool {
@@ -145,5 +244,31 @@ mod tests {
         assert!(!is_extreme(Decimal::ZERO));
         assert!(!is_extreme(dec("0.0001")));
         assert!(is_extreme(dec("1e-27")));
+    }
+
+    #[test]
+    fn parse_number_prefers_decimal_and_falls_back_to_float() {
+        assert_eq!(parse_number("0.1").unwrap(), Number::Decimal(dec("0.1")));
+        let big = parse_number("7.257415615307999e306").unwrap();
+        assert!(matches!(big, Number::Float(_)));
+        assert_eq!(parse_number("1e400").unwrap_err().code, ErrorCode::Overflow);
+        assert_eq!(
+            parse_number("not-a-number").unwrap_err().code,
+            ErrorCode::InvalidInput
+        );
+    }
+
+    #[test]
+    fn canonical_float_rounds_to_fifteen_significant_digits() {
+        assert_eq!(canonical_float(0.49999999999999994), "0.5");
+        assert_eq!(canonical_float(0.30000000000000004), "0.3");
+        assert_eq!(canonical_float(120.0), "120");
+        assert_eq!(canonical_float(-2.5), "-2.5");
+        assert_eq!(canonical_float(1500.0), "1500");
+        assert_eq!(canonical_float(1e-16), "1e-16");
+        assert_eq!(canonical_float(1e16), "1e16");
+        assert_eq!(canonical_float(std::f64::consts::PI), "3.14159265358979");
+        assert_eq!(canonical_float(0.0), "0");
+        assert_eq!(canonical_float(-0.0), "0");
     }
 }

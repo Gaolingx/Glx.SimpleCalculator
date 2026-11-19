@@ -1,0 +1,24 @@
+.keypad {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-auto-rows: minmax(2.75rem, 1fr);
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.keypad .key {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 30rem) {
+  .keypad .key {
+    font-size: 0.85rem;
+  }
+}

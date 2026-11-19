@@ -49,6 +49,20 @@ describe("formatNumber", () => {
     expect(formatNumber("-0.0000000000000000123")).toBe("-1.23e-17");
   });
 
+  it("accepts E notation produced by the scientific engine", () => {
+    expect(formatNumber("1.5e3")).toBe("1,500");
+    expect(formatNumber("1e-16")).toBe("1e-16");
+    expect(formatNumber("7.257415615307999e306")).toBe("7.257415615307999e+306");
+    expect(formatNumber("1.2345678901234567e20")).toBe("1.234567890123457e+20");
+  });
+
+  it("forces scientific notation for the F-E toggle", () => {
+    expect(formatNumber("1234.5", { notation: "scientific" })).toBe("1.2345e+3");
+    expect(formatNumber("-0.000123", { notation: "scientific" })).toBe("-1.23e-4");
+    expect(formatNumber("0", { notation: "scientific" })).toBe("0");
+    expect(formatNumber("12.000", { notation: "scientific" })).toBe("1.2e+1");
+  });
+
   it("honours custom significant-digit and exponent settings", () => {
     expect(formatNumber("1234.5678", { significantDigits: 6 })).toBe("1,234.57");
     expect(formatNumber("123456", { upperExponent: 3 })).toBe("1.23456e+5");

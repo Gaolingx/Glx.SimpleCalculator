@@ -471,6 +471,106 @@ fn integer_division_produces_decimal_fraction() {
 }
 
 #[test]
+fn scientific_trigonometry_uses_the_angle_unit() {
+    let mut engine = Engine::new(Mode::Scientific);
+    type_text(&mut engine, "30");
+    assert_eq!(unary(&mut engine, UnaryOp::Sin).value, "0.5");
+
+    engine.apply(CalcCommand::SetAngleUnit {
+        unit: AngleUnit::Rad,
+    });
+    engine.apply(CalcCommand::SetExpression {
+        text: "0.5235987755982988".into(),
+    });
+    assert_eq!(unary(&mut engine, UnaryOp::Sin).value, "0.5");
+
+    engine.apply(CalcCommand::SetAngleUnit {
+        unit: AngleUnit::Grad,
+    });
+    engine.apply(CalcCommand::SetExpression { text: "100".into() });
+    assert_eq!(unary(&mut engine, UnaryOp::Sin).value, "1");
+}
+
+#[test]
+fn scientific_functions_cover_extreme_factorials() {
+    let mut engine = Engine::new(Mode::Scientific);
+    type_text(&mut engine, "170");
+    let view = unary(&mut engine, UnaryOp::Factorial);
+    assert_eq!(view.error, None);
+    assert!(view.value.starts_with("7.25741561530799"));
+
+    let mut engine = Engine::new(Mode::Scientific);
+    type_text(&mut engine, "171");
+    let view = unary(&mut engine, UnaryOp::Factorial);
+    assert_eq!(view.error.unwrap().code, ErrorCode::Overflow);
+}
+
+#[test]
+fn scientific_mode_accepts_fractional_powers() {
+    let mut engine = Engine::new(Mode::Scientific);
+    let view = engine.apply(CalcCommand::SetExpression {
+        text: "2^0.5".into(),
+    });
+    assert!(view.value.starts_with("1.4142135623731"));
+    assert_eq!(view.error, None);
+
+    let view = engine.apply(CalcCommand::SetExpression {
+        text: "2^3^2".into(),
+    });
+    assert_eq!(view.value, "512");
+}
+
+#[test]
+fn scientific_domain_errors_are_reported() {
+    let mut engine = Engine::new(Mode::Scientific);
+    type_text(&mut engine, "0");
+    let view = unary(&mut engine, UnaryOp::Ln);
+    assert_eq!(view.error.unwrap().code, ErrorCode::DomainError);
+
+    let mut engine = Engine::new(Mode::Scientific);
+    type_text(&mut engine, "2");
+    let view = unary(&mut engine, UnaryOp::Asin);
+    assert_eq!(view.error.unwrap().code, ErrorCode::DomainError);
+}
+
+#[test]
+fn equals_after_a_unary_keeps_the_function_expression() {
+    let mut engine = Engine::new(Mode::Scientific);
+    type_text(&mut engine, "30");
+    unary(&mut engine, UnaryOp::Sin);
+    let view = press_equals(&mut engine);
+    assert_eq!(view.expression, "sin(30) =");
+    assert_eq!(view.value, "0.5");
+
+    // Typing after a unary result starts a fresh calculation.
+    type_text(&mut engine, "7");
+    let view = press_equals(&mut engine);
+    assert_eq!(view.expression, "7 =");
+    assert_eq!(view.value, "7");
+}
+
+#[test]
+fn unary_domain_error_keeps_the_expression_line() {
+    let mut engine = Engine::new(Mode::Scientific);
+    type_text(&mut engine, "90");
+    let view = unary(&mut engine, UnaryOp::Tan);
+    assert_eq!(view.error.unwrap().code, ErrorCode::DomainError);
+    assert_eq!(view.expression, "tan(90)");
+}
+
+#[test]
+fn random_values_stay_in_range_and_vary() {
+    let mut engine = Engine::new(Mode::Scientific);
+    let first = engine.apply(CalcCommand::Random).value;
+    let second = engine.apply(CalcCommand::Random).value;
+    assert_ne!(first, second);
+    for value in [first, second] {
+        let parsed: f64 = value.parse().expect("random value is numeric");
+        assert!((0.0..1.0).contains(&parsed));
+    }
+}
+
+#[test]
 fn mode_is_preserved_in_view() {
     let engine = Engine::new(Mode::Scientific);
     assert_eq!(engine.view().mode, Mode::Scientific);

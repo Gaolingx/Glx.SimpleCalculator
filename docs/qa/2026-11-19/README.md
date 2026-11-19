@@ -99,3 +99,27 @@
 - `t7-light-zh-CN-menu.png`、`t7-light-en-US-menu.png`、`t7-dark-zh-CN-menu.png`、`t7-dark-en-US-menu.png`（440×820，1x）
 - `t7-tauri-verified.png`（真实 Tauri WebView2，`2 + 3 =` 与右键菜单，772×1437 @175%）
 
+# T8 科学型 — 2026-11-19
+
+- 方式：Tauri dev + WebView2 CDP（真实 IPC/设置/历史）；截图使用 CDP 设备模拟 440×820（1x）与真实 175% DPI 各一套。QA 前后已恢复设置与系统剪贴板，并清空科学型历史。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 三角函数 | DEG `sin(30)` → `0.5`；RAD `π ÷ 2 =` 后 `sin` → `1`；GRAD `sin(100)` → `1`，`settings.json` 的 `angleUnit` 同步为 `grad` |
+| 大数 | `170!` → `7.25741561530799e+306`（f64，超出 Decimal 值域） |
+| F-E | `1,234.5` → `1.2345e+3`，再次点击恢复 `1,234.5` |
+| 随机 | 连续两次 `rand` 结果不同，均落在 `[0,1)` |
+| 定义域 | `tan(90)`、`ln(0)` 显示「超出定义域」，表达式行保留原输入；输入 `5` 后正常恢复 |
+| 历史 | `sin(30) =` 作为完整表达式记录；恢复后显示 `0.5`，角度制仍为 DEG，继续计算正确 |
+| 剪贴板/菜单 | Ctrl+C 复制 `0.5`；右键菜单仍为 4 项，Esc 关闭且不清值 |
+| 布局 | 441×821 客户端尺寸、`scrollWidth/Height` 与视口一致；6×8 键位全部在视口内 |
+| 控制台 | 0 error（含错误路径与随机/历史操作） |
+| 测试 | 前端 105 项、Rust 132 项通过 |
+
+## 截图
+
+- `t8-light-zh-CN-scientific.png`、`t8-light-en-US-scientific.png`、`t8-dark-zh-CN-scientific.png`、`t8-dark-en-US-scientific.png`（440×820，1x，`sin(30)=0.5`）
+- `t8-tauri-verified.png`（真实 Tauri WebView2，`170!` 结果，772×1437 @175%）
+

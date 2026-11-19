@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T7 完成**（2026-11-19）：剪贴板读写、粘贴清洗、右键菜单与复制入口；下一步 T8 |
+| 当前进度 | **T8 完成**（2026-11-19）：科学函数、角度制、F-E、科学键盘与模式级会话；下一步 T9 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -176,6 +176,20 @@ setx PATH "%PATH%;E:\node"
 - QA（Tauri dev + WebView2 CDP，真实系统剪贴板）：显示区复制原始值 `1234567`，菜单复制显示值 `1,234,567`；Ctrl+V 粘贴 `1,234` → `1234`，全角 `１２３＋４５` → `168`，表达式 `2×(3+4)` → `14` 且表达式行保留；`0xFF` → `255`；1,001 字符 → 「粘贴内容过长」；空剪贴板 → 「剪贴板为空」；`abc` → 「剪贴板内容无法粘贴」且值不变；Esc 关闭菜单不清值；Ctrl+H 关闭菜单并打开历史。控制台 0 error；QA 前后已恢复系统剪贴板与设置。
 - 截图：`docs/qa/2026-11-19/t7-{light,dark}-{zh-CN,en-US}-menu.png`（440×820）+ `t7-tauri-verified.png`（772×1437 @175%）。
 
+**T8 实测记录（2026-11-19）**
+
+- 数值模型：`value::Number` 引入 `Decimal` / `f64` 双表示。四则、整数幂、百分比、`sqrt/x²/x³/1/x/|x|/floor/ceil/round` 仍走 Decimal 精确路径；三角、反三角、双曲、对数、`x^y`（非整数指数）、`∛`、`n!`、`exp` 走 f64，混合运算自动提升为 f64。f64 结果按 15 位有效数字规范化，`[1e-15, 1e16)` 用普通记法，其余用 E 记法，避免 `sin(30°)` 显示 `0.49999999999999994`。
+- 科学函数：新增 `ops::scientific`，覆盖 `sin/cos/tan`、反三角、双曲/反双曲、`ln/log/log2/exp`、`x^y`、`∛`、`n!`、`abs/floor/ceil/round`；角度制在入口/出口统一换算。定义域错误返回 `DOMAIN_ERROR`（`tan 90°`、`ln 0`、`|x|>1` 的 asin 等）；`n!` 接受 0–170，`>170` 为 `OVERFLOW`，负数/非整数为 `DOMAIN_ERROR`；`exp(1000)` 为 `OVERFLOW`。三角结果小于 `1e-15` 归零，保证 `cos 90° = 0`。
+- 引擎：科学一元函数仅在科学模式启用（基本模式仍 `UNSUPPORTED`）；一元结果后按 `=` 保留 `sin(30) =` 表达式（历史记录不再退化为 `0.5 =`）；定义域错误时表达式行保留 `tan(90)`，数字/退格可恢复。`rand` 使用每会话 xorshift64*，返回 `[0,1)`。
+- 会话：`SessionMap` 改为按窗口 + 模式隔离引擎，新增 `session_select(mode)`；页面挂载时激活对应会话，路由往返不丢状态，也不会让科学命令落到基本引擎。历史恢复科学条目后重新下发当前角度制。
+- 契约：新增 `CalcCommand::Random`（`{"type":"random"}`）与 `session_select`；`session_reset` 语义不变。前端 `ipc.ts` 同步 `random` 与 `selectSession`。
+- 前端：`ScientificPage` 6 列 × 8 行键盘（48 键），含全部函数、括号、常量与数字区；DEG/RAD/GRAD 通过设置持久化并即时下发；F-E 切换仅影响显示（`formatNumber({notation:"scientific"})`，支持 Rust 产生的 E 记法输入）。标准页与科学页的会话/剪贴板/键盘/右键菜单逻辑收敛到 `useCalculatorSession` 与 `CalculatorMenu`，BasicPage 行为不变。
+- 测试：Rust 132 项（calc-core 115 = lib 100 + 契约 5 + 黄金 1 + 科学集成 9；shell 17 = 设置 5 + 历史 8 + 会话 4）；前端 105 项（新增 `ScientificPage` 9、`format` 2、历史抽屉 1；`BasicPage` 20 项重构后不变）。
+- 门禁：`cargo fmt --check` / `clippy -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 350.77 kB（gzip 109.59 kB）、CSS 31.74 kB（gzip 6.04 kB），仍在 250 kB gzip 预算内。
+- QA（Tauri dev + WebView2 CDP，真实 IPC）：`30 sin` → `0.5`；RAD 下 `π ÷ 2 =` 后 `sin` → `1`；GRAD 下 `sin(100)` → `1` 且 `settings.json` 的 `angleUnit=grad`；`170!` → `7.25741561530799e+306`；F-E 将 `1,234.5` 显示为 `1.2345e+3` 并可切回；连续两次 `rand` 结果不同；`tan(90)`、`ln(0)` 显示「超出定义域」且表达式行保留，随后输入 `5` 恢复；`sin(30) =` 表达式保留；历史恢复后角度制与计算继续正确；Ctrl+C 复制 `0.5`、右键菜单 4 项与 Esc 关闭正常。441×821 客户端尺寸无溢出，控制台 0 error。
+- 实机发现并修复：科学函数定义域错误丢表达式；一元结果按 `=` 丢失函数表达式；截图中 `xʸ` 误用运算符底色、`⌊x⌋/⌈x⌉` 字形不可辨、F-E 按钮缺乏控件感（改为 `floor/ceil/exp` 文本与 function 变体）。
+- 截图：`docs/qa/2026-11-19/t8-{light,dark}-{zh-CN,en-US}-scientific.png`（440×820）+ `t8-tauri-verified.png`（170!，真实 175% DPI）。
+
 
 ### 1.4 参考截图 → 布局结论
 
@@ -322,7 +336,7 @@ Glx.SimpleCalculator/
 | 状态 | 归属 | 说明 |
 |---|---|---|
 | 当前模式 / 抽屉开关 / 弹层 | 前端 Zustand | 纯 UI |
-| 标准/科学/程序员/统计会话 | **Rust** `SessionMap<WindowLabel, Session>` | 每窗口独立；含表达式 token、pending op、memory、radix、word size、angle unit |
+| 标准/科学/程序员/统计会话 | **Rust** `SessionMap<WindowLabel, {active: Mode, engines: Mode→Session}>` | 每窗口、每模式独立；含表达式 token、pending op、memory、radix、word size、angle unit；`session_select` 切换活跃模式 |
 | 单位/日期/工作表输入 | 前端表单状态 | 提交时走纯函数命令 |
 | 设置 | Rust store + 前端镜像 | 单一写入方为 Rust 命令，避免双写 |
 | 历史 | Rust store（默认 500，设置范围 100–1000） | 引擎完成 `=`/函数时返回 entry，由前端调用 `history_add` 落盘 |
@@ -392,6 +406,7 @@ pub enum CalcCommand {
 > T5 已实现 `calc_command` 与 `session_reset`。业务错误走 `CalcView.error`；`Result<_, ErrorInfo>` 仅表示协议级失败（当前恒为 `Ok`），前端仍按错误码统一处理。
 > T6 新增 `CalcCommand::Recall { expression, value }` 与 `history_list/add/delete/clear(mode)`、`clipboard_copy`。历史条目随 `history.json` 持久化，恢复采用「不重新求值」语义。
 > T7 新增 `clipboard_read`（系统剪贴板读取，空剪贴板返回空串）；粘贴清洗与右键菜单均在前端，清洗长度上限 1,000 字符。
+> T8 新增 `CalcCommand::Random`（`{"type":"random"}`）与 `session_select(mode)`：会话按窗口 + 模式隔离，页面挂载时激活；科学值可落为 `Number::Float`（最多 15 位有效数字，E 记法），`Decimal` 路径保持精确。
 
 契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
@@ -679,7 +694,7 @@ src/i18n/locales/en-US/...（同构）
 | T5 | 标准模式 UI + 格式化 + 键盘 | M2 | T3,T4 | 标准页、`Display`、`Keypad`、`lib/format.ts`（分组）、键盘映射 | 手工用例表；Vitest 格式化 | done |
 | T6 | 历史记录 | M2 | T4,T5 | 存储命令、历史抽屉、恢复/删除/清空/复制 | 重启保留；上限；两语言 | done |
 | T7 | 剪贴板 + 校验 + 右键菜单 | M2 | T5 | `lib/clipboard.ts`、粘贴清洗、`SoftMenu`、错误提示 | 非法粘贴；0x/0b；Ctrl+C/V | done |
-| T8 | 科学型 | M3 | T4 | `ops::scientific`、科学键盘、角度制、F-E、定义域错误 | sin/cos/ln/阶乘/幂单测；RAD/DEG | pending |
+| T8 | 科学型 | M3 | T4 | `ops::scientific`、科学键盘、角度制、F-E、定义域错误 | sin/cos/ln/阶乘/幂单测；RAD/DEG | done |
 | T9 | 程序员核心 | M4 | T4 | 进制/字宽/位运算/旋转/补码、真值表与属性测试 | 掩码、环绕、BYTE/QWORD 边界 | pending |
 | T10 | 程序员 UI | M4 | T9 | 进制/字宽切换、四进制显示、位网格、无效输入拦截 | 点击翻转位；切换进制同步 | pending |
 | T11 | 统计型 | M5 | T4 | 数据集面板、统计函数、空集/单元素边界 | 与 Excel 样本一致 | pending |
@@ -763,12 +778,12 @@ npm run typecheck && npm run test
 ### M3 科学型（2 人日）
 
 **任务**
-- [ ] 三角函数/反三角/双曲（DEG/RAD/GRAD 换算在入口统一）
-- [ ] `ln log exp x^y x³ ∛ n! |x| floor ceil round rand π e 1/x x² √`
-- [ ] 括号与优先级展示；`F-E` 科学记数法切换
-- [ ] 定义域/溢出错误（如 `√-1`、`n!>170`、`log 0`）
-- [ ] 科学键盘布局（5 列或两段式，保持 44px 最小点击区）
-- [ ] 单测覆盖每个函数与角度制
+- [x] 三角函数/反三角/双曲（DEG/RAD/GRAD 换算在入口统一）
+- [x] `ln log exp x^y x³ ∛ n! |x| floor ceil round rand π e 1/x x² √`
+- [x] 括号与优先级展示；`F-E` 科学记数法切换
+- [x] 定义域/溢出错误（如 `√-1`、`n!>170`、`log 0`）
+- [x] 科学键盘布局（6 列 × 8 行，44px 最小点击区）
+- [x] 单测覆盖每个函数与角度制
 
 **验收**
 - `sin(30°) = 0.5`；`RAD` 下同输入结果正确
@@ -874,7 +889,7 @@ npm run typecheck && npm run test
 | T5 | 格式化（分组/有效数字/E 记法）与按键事件 | `src/lib/format.test.ts`、`src/features/basic/*.test.tsx` | 分组开关切换；Ctrl+C/V |
 | T6 | 历史上限/排序/持久化/恢复 | `src-tauri/src/history.rs` 单测（日志排序/折叠/截断/删除/清空/serde） | 重启保留；超限淘汰 |
 | T7 | 粘贴清洗（全角/分组符/0x/0b/超长） | `src/lib/clipboard.test.ts` | 非法输入不崩溃 |
-| T8 | 每个科学函数 + 角度制 + 定义域 | `crates/calc-core/tests/scientific.rs` | 与基准值一致 |
+| T8 | 每个科学函数 + 角度制 + 定义域；页面键位/角度/F-E | `crates/calc-core/tests/scientific.rs`、`src/features/scientific/*.test.tsx` | 与基准值一致；键位命令与设置持久化 |
 | T9 | 位运算真值表 + ROL/ROR 互逆 + 字宽 | `crates/calc-core/tests/programmer.rs` | 属性测试通过 |
 | T10 | 进制视图/分组/非法输入 | `src/features/programmer/*.test.tsx` | 四进制同步 |
 | T11 | 统计样本与边界 | `crates/calc-core/tests/statistics.rs` | 与 Excel 对齐 |
@@ -1086,6 +1101,9 @@ rm -rf src-tauri/target/release/bundle
 | 19 | 3.5 / T5 | 基本模式的 E 记法阈值未定义 | 基本模式最多 16 位有效数字；指数 ≥16 或 ≤−16 转 E 记法，阈值由 `lib/format.ts` 参数化 |
 | 20 | 3.4 / T6 | 历史记录由谁写入、去重与恢复语义未定义 | 前端在完成的 `=` 后调用 `history_add`；条目最新在前、仅折叠与最新一条相同的连续重复；恢复使用 `Recall` 不重新求值；列表/清空按模式隔离 |
 | 21 | 3.6 / 4.7 | T7 前未说明非程序员模式粘贴 `0x/0b/0o` 的行为，「复制显示值」是否跟随分组开关也不明确 | T7 明确：程序员模式切 radix 并插入数字，其他模式转十进制；复制显示值按当前分组设置，默认带分组 |
+| 22 | 3.5 / 3.7 | 科学型声明 f64，但会话值与历史存储原为单一 Decimal（96 位上限约 7.9e28，无法容纳 170!） | T8 引入 `Number::{Decimal,Float}`：精确运算仍走 Decimal，科学结果与超大数走 f64；f64 规范化 15 位有效数字并保留 E 记法；`n!>170` 为 `OVERFLOW`，负数/非整数为 `DOMAIN_ERROR` |
+| 23 | 3.4 / 3.6 | 单窗口仅一个 Engine，切到科学页会沿用基本模式（科学键返回 `UNSUPPORTED`），历史恢复后角度制也会丢失 | T8 改为每窗口 + 每模式一个 Engine，新增 `session_select(mode)`；页面挂载激活对应会话，历史恢复科学条目后重新下发当前角度制 |
+| 24 | 4.7 / T6 | 一元函数结果按 `=` 会把表达式行与历史退化为 `0.5 =`，且定义域错误会清空 `tan(90)` | T8 让一元表达式在按 `=` 时保留（`sin(30) =`），并在求值前写入表达式，使定义域错误仍显示原输入 |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 

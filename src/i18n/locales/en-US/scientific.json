@@ -1,4 +1,38 @@
 {
   "title": "Scientific",
-  "angleUnit": "Angle unit"
+  "angleUnit": "Angle unit",
+  "keypad": "Scientific keypad",
+  "notation": {
+    "toggle": "Toggle scientific notation"
+  },
+  "keys": {
+    "sin": "Sine",
+    "cos": "Cosine",
+    "tan": "Tangent",
+    "asin": "Arcsine",
+    "acos": "Arccosine",
+    "atan": "Arctangent",
+    "sinh": "Hyperbolic sine",
+    "cosh": "Hyperbolic cosine",
+    "tanh": "Hyperbolic tangent",
+    "ln": "Natural logarithm",
+    "log": "Common logarithm",
+    "exp": "Exponential",
+    "square": "Square",
+    "cube": "Cube",
+    "power": "Power",
+    "sqrt": "Square root",
+    "cubeRoot": "Cube root",
+    "factorial": "Factorial",
+    "reciprocal": "Reciprocal",
+    "abs": "Absolute value",
+    "floor": "Floor",
+    "ceil": "Ceiling",
+    "round": "Round",
+    "rand": "Random number",
+    "pi": "Pi",
+    "e": "Euler's number",
+    "openGroup": "Open parenthesis",
+    "closeGroup": "Close parenthesis"
+  }
 }

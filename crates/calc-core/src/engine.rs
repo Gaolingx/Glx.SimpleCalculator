@@ -11,7 +11,7 @@ use crate::error::{CalcResult, ErrorCode, ErrorInfo};
 use crate::mode::{AngleUnit, Mode, Radix, WordSize};
 use crate::ops;
 use crate::parser::{self, Token};
-use crate::value;
+use crate::value::{self, Number};
 use crate::view::CalcView;
 
 const PI: &str = "3.1415926535897932384626433833";
@@ -28,12 +28,12 @@ impl Entry {
         Self { raw: raw.into() }
     }
 
-    fn decimal(&self) -> CalcResult<Decimal> {
+    fn number(&self) -> CalcResult<Number> {
         let trimmed = self.raw.trim_end_matches('.');
         if trimmed.is_empty() || trimmed == "-" {
-            return Ok(Decimal::ZERO);
+            return Ok(Number::Decimal(Decimal::ZERO));
         }
-        value::parse(trimmed)
+        value::parse_number(trimmed)
     }
 
     fn push_digit(&mut self, digit: u8) {
@@ -64,15 +64,19 @@ pub struct Engine {
     mode: Mode,
     tokens: Vec<Token>,
     entry: Option<Entry>,
-    result: Option<Decimal>,
+    result: Option<Number>,
     expression: String,
-    memory: Option<Decimal>,
+    memory: Option<Number>,
     error: Option<ErrorInfo>,
-    last_op: Option<(BinaryOp, Decimal)>,
+    last_op: Option<(BinaryOp, Number)>,
     angle_unit: AngleUnit,
     radix: Radix,
     word_size: WordSize,
     replace_entry: bool,
+    /// True when the current display is a unary result whose `sin(30)` style
+    /// expression should survive an immediate `=`.
+    unary_expression: bool,
+    rng_state: u64,
 }
 
 impl Default for Engine {
@@ -96,6 +100,8 @@ impl Engine {
             radix: Radix::Decimal,
             word_size: WordSize::Qword,
             replace_entry: false,
+            unary_expression: false,
+            rng_state: random_seed(),
         }
     }
 
@@ -110,6 +116,8 @@ impl Engine {
         }
 
         self.error = None;
+        let previous_unary_expression = self.unary_expression;
+        self.unary_expression = false;
         let handled = match command {
             CalcCommand::Digit { digit } => self.digit(digit),
             CalcCommand::Dot => self.dot(),
@@ -137,7 +145,7 @@ impl Engine {
             }
             CalcCommand::Unary { op } => self.unary(op),
             CalcCommand::Binary { op } => self.binary(op),
-            CalcCommand::Equals => self.equals(),
+            CalcCommand::Equals => self.equals(previous_unary_expression),
             CalcCommand::Percent => self.percent(),
             CalcCommand::ToggleSign => {
                 self.toggle_sign();
@@ -169,6 +177,10 @@ impl Engine {
                 Ok(())
             }
             CalcCommand::ToggleBit { .. } => Err(ErrorInfo::new(ErrorCode::Unsupported)),
+            CalcCommand::Random => {
+                self.random();
+                Ok(())
+            }
             CalcCommand::SetExpression { text } => self.set_expression(&text),
             CalcCommand::Recall { expression, value } => self.recall(&expression, &value),
         };
@@ -179,6 +191,7 @@ impl Engine {
             self.entry = None;
             self.result = None;
             self.last_op = None;
+            self.unary_expression = false;
         }
         self.view()
     }
@@ -186,7 +199,7 @@ impl Engine {
     pub fn view(&self) -> CalcView {
         let value = match (&self.entry, self.result) {
             (Some(entry), _) => entry.raw.clone(),
-            (None, Some(result)) => value::canonical(result),
+            (None, Some(result)) => result.canonical(),
             (None, None) => String::new(),
         };
         let expression = if self.tokens.is_empty() {
@@ -198,7 +211,7 @@ impl Engine {
             mode: self.mode,
             expression,
             value,
-            memory: self.memory.map(value::canonical),
+            memory: self.memory.map(Number::canonical),
             programmer: None,
             error: self.error.clone(),
         }
@@ -276,30 +289,34 @@ impl Engine {
 
     fn unary(&mut self, op: UnaryOp) -> CalcResult<()> {
         let input = self.current_value()?;
-        let computed = ops::basic::apply_unary(op, input)?;
         let display = unary_name(op);
         let prefix = parser::format_tokens(&self.tokens);
+        // Set the expression before evaluating so a domain error still shows
+        // the attempted input (HANDOFF §4.7).
         self.expression = if prefix.is_empty() {
-            format!("{display}({})", value::canonical(input))
+            format!("{display}({})", input.canonical())
         } else {
-            format!("{prefix} {display}({})", value::canonical(input))
+            format!("{prefix} {display}({})", input.canonical())
         };
-        self.entry = Some(Entry::new(value::canonical(computed)));
+        let computed = ops::apply_unary(op, input, self.mode, self.angle_unit)?;
+        self.entry = Some(Entry::new(computed.canonical()));
         self.replace_entry = true;
+        self.unary_expression = true;
         self.last_op = None;
         Ok(())
     }
 
     fn binary(&mut self, op: BinaryOp) -> CalcResult<()> {
         if let Some(entry) = &self.entry {
-            let value = entry.decimal()?;
+            let value = entry.number()?;
             self.tokens.push(Token::Number(value));
             self.result = Some(value);
         } else if self.tokens.is_empty() {
-            let value = self.result.unwrap_or(Decimal::ZERO);
+            let value = self.result.unwrap_or(Number::Decimal(Decimal::ZERO));
             self.tokens.push(Token::Number(value));
         } else if matches!(self.tokens.last(), Some(Token::OpenGroup)) {
-            self.tokens.push(Token::Number(Decimal::ZERO));
+            self.tokens
+                .push(Token::Number(Number::Decimal(Decimal::ZERO)));
         }
 
         match self.tokens.last_mut() {
@@ -316,13 +333,17 @@ impl Engine {
         Ok(())
     }
 
-    fn equals(&mut self) -> CalcResult<()> {
+    fn equals(&mut self, keep_unary_expression: bool) -> CalcResult<()> {
         if self.tokens.is_empty() {
             if self.entry.is_none() {
                 return self.repeat_equals();
             }
             let value = self.current_value()?;
-            self.expression = format!("{} =", value::canonical(value));
+            self.expression = if keep_unary_expression && !self.expression.is_empty() {
+                format!("{} =", self.expression)
+            } else {
+                format!("{} =", value.canonical())
+            };
             self.result = Some(value);
             self.entry = None;
             self.replace_entry = false;
@@ -332,18 +353,18 @@ impl Engine {
 
         let needs_rhs = matches!(self.tokens.last(), Some(Token::Op(_) | Token::OpenGroup));
         if let Some(entry) = &self.entry {
-            let value = entry.decimal()?;
+            let value = entry.number()?;
             self.tokens.push(Token::Number(value));
             self.result = Some(value);
         } else if needs_rhs {
-            let value = self.result.unwrap_or(Decimal::ZERO);
+            let value = self.result.unwrap_or(Number::Decimal(Decimal::ZERO));
             self.tokens.push(Token::Number(value));
         }
 
         let tokens = self.tokens.clone();
         self.expression = parser::format_tokens(&tokens);
         let expr = parser::parse_tokens(&tokens)?;
-        let computed = ops::evaluate(&expr)?;
+        let computed = ops::evaluate(&expr, self.mode)?;
         self.expression.push_str(" =");
 
         self.last_op = repeat_operand(&tokens);
@@ -361,12 +382,12 @@ impl Engine {
         let Some(lhs) = self.result else {
             return Ok(());
         };
-        let computed = ops::evaluate_binary(op, lhs, rhs)?;
+        let computed = ops::evaluate_binary(op, lhs, rhs, self.mode)?;
         self.expression = format!(
             "{} {} {} =",
-            value::canonical(lhs),
+            lhs.canonical(),
             parser::symbol(op),
-            value::canonical(rhs)
+            rhs.canonical()
         );
         self.result = Some(computed);
         Ok(())
@@ -374,25 +395,32 @@ impl Engine {
 
     fn percent(&mut self) -> CalcResult<()> {
         let pct = self.current_value()?;
+        let hundred = Number::Decimal(Decimal::ONE_HUNDRED);
         let computed = match self.tokens.last() {
             Some(Token::Op(op)) => {
                 let prefix = &self.tokens[..self.tokens.len() - 1];
                 let base = if prefix.is_empty() {
-                    Decimal::ZERO
+                    Number::Decimal(Decimal::ZERO)
                 } else {
-                    ops::evaluate(&parser::parse_tokens(prefix)?)?
+                    ops::evaluate(&parser::parse_tokens(prefix)?, self.mode)?
                 };
                 match op {
-                    BinaryOp::Add | BinaryOp::Subtract => ops::basic::percent_of(base, pct)?,
+                    BinaryOp::Add | BinaryOp::Subtract => {
+                        // Windows semantics: replace the entry with `base * pct / 100`
+                        // so `50 + 10% =` evaluates to `50 + 5`.
+                        let scaled =
+                            ops::evaluate_binary(BinaryOp::Multiply, base, pct, self.mode)?;
+                        ops::evaluate_binary(BinaryOp::Divide, scaled, hundred, self.mode)?
+                    }
                     BinaryOp::Multiply | BinaryOp::Divide => {
-                        ops::basic::divide(pct, Decimal::ONE_HUNDRED)?
+                        ops::evaluate_binary(BinaryOp::Divide, pct, hundred, self.mode)?
                     }
                     _ => return Err(ErrorInfo::new(ErrorCode::Unsupported)),
                 }
             }
-            _ => ops::basic::divide(pct, Decimal::ONE_HUNDRED)?,
+            _ => ops::evaluate_binary(BinaryOp::Divide, pct, hundred, self.mode)?,
         };
-        self.entry = Some(Entry::new(value::canonical(computed)));
+        self.entry = Some(Entry::new(computed.canonical()));
         self.replace_entry = true;
         Ok(())
     }
@@ -421,12 +449,13 @@ impl Engine {
             }
             MemoryOp::Add | MemoryOp::Subtract => {
                 let value = self.current_value()?;
-                let base = self.memory.unwrap_or(Decimal::ZERO);
-                self.memory = Some(if matches!(op, MemoryOp::Add) {
-                    ops::basic::add(base, value)?
+                let base = self.memory.unwrap_or(Number::Decimal(Decimal::ZERO));
+                let binary = if matches!(op, MemoryOp::Add) {
+                    BinaryOp::Add
                 } else {
-                    ops::basic::subtract(base, value)?
-                });
+                    BinaryOp::Subtract
+                };
+                self.memory = Some(ops::evaluate_binary(binary, base, value, self.mode)?);
                 self.replace_entry = true;
             }
             MemoryOp::Recall => {
@@ -434,7 +463,7 @@ impl Engine {
                     return Ok(());
                 };
                 self.begin_entry_if_needed();
-                self.entry = Some(Entry::new(value::canonical(memory)));
+                self.entry = Some(Entry::new(memory.canonical()));
                 self.replace_entry = true;
             }
         }
@@ -443,7 +472,7 @@ impl Engine {
 
     fn open_group(&mut self) {
         if let Some(entry) = &self.entry {
-            if let Ok(value) = entry.decimal() {
+            if let Ok(value) = entry.number() {
                 self.tokens.push(Token::Number(value));
             }
         }
@@ -474,7 +503,7 @@ impl Engine {
             return;
         }
         if let Some(entry) = &self.entry {
-            if let Ok(value) = entry.decimal() {
+            if let Ok(value) = entry.number() {
                 self.tokens.push(Token::Number(value));
             }
             self.entry = None;
@@ -500,14 +529,14 @@ impl Engine {
                 self.tokens.clear();
                 self.expression.clear();
                 self.result = None;
-                self.entry = Some(Entry::new(value::canonical(*n)));
+                self.entry = Some(Entry::new(n.canonical()));
                 self.replace_entry = true;
                 self.last_op = None;
                 return Ok(());
             }
         }
         let expr = parser::parse_tokens(&tokens)?;
-        let computed = ops::evaluate(&expr)?;
+        let computed = ops::evaluate(&expr, self.mode)?;
         self.tokens = tokens;
         self.expression = parser::format_tokens(&self.tokens);
         self.entry = None;
@@ -520,25 +549,53 @@ impl Engine {
     /// Restores a history entry without re-evaluating: the stored expression is
     /// display-only, the stored value becomes the current (replaceable) entry.
     fn recall(&mut self, expression: &str, value: &str) -> CalcResult<()> {
-        let parsed = value::parse(value)?;
+        let parsed = value::parse_number(value)?;
         self.tokens.clear();
         self.expression = expression.to_owned();
-        self.entry = Some(Entry::new(value::canonical(parsed)));
+        self.entry = Some(Entry::new(parsed.canonical()));
         self.result = Some(parsed);
         self.replace_entry = true;
         self.last_op = None;
         Ok(())
     }
 
-    fn current_value(&self) -> CalcResult<Decimal> {
+    fn current_value(&self) -> CalcResult<Number> {
         match &self.entry {
-            Some(entry) => entry.decimal(),
-            None => Ok(self.result.unwrap_or(Decimal::ZERO)),
+            Some(entry) => entry.number(),
+            None => Ok(self.result.unwrap_or(Number::Decimal(Decimal::ZERO))),
         }
+    }
+
+    fn random(&mut self) {
+        self.begin_entry_if_needed();
+        let value = self.next_random();
+        self.expression = "rand()".to_owned();
+        self.entry = Some(Entry::new(value::canonical_float(value)));
+        self.replace_entry = true;
+        self.last_op = None;
+    }
+
+    /// xorshift64; seeded per session so repeated `rand` presses differ.
+    fn next_random(&mut self) -> f64 {
+        let mut state = self.rng_state;
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        self.rng_state = state;
+        (state >> 11) as f64 / (1u64 << 53) as f64
     }
 }
 
-fn repeat_operand(tokens: &[Token]) -> Option<(BinaryOp, Decimal)> {
+fn random_seed() -> u64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_nanos() as u64)
+        .unwrap_or(0x9E37_79B9_7F4A_7C15)
+        | 1
+}
+
+fn repeat_operand(tokens: &[Token]) -> Option<(BinaryOp, Number)> {
     let (index, op) = tokens.iter().enumerate().rev().find_map(|(i, t)| match t {
         Token::Op(op) => Some((i, *op)),
         _ => None,

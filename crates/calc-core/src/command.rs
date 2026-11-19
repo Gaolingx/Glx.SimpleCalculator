@@ -45,6 +45,8 @@ pub enum CalcCommand {
     ToggleBit {
         bit: u8,
     },
+    /// Scientific `rand`: a pseudo-random value in `[0, 1)`.
+    Random,
     /// Replace the current entry, used by paste.
     SetExpression {
         text: String,

@@ -15,6 +15,8 @@ export interface FormatNumberOptions {
   upperExponent?: number;
   /** Use E notation when the base-10 exponent is <= this value (default -16). */
   lowerExponent?: number;
+  /** `scientific` always renders E notation (the scientific-mode F-E toggle). */
+  notation?: "auto" | "scientific";
 }
 
 const DEFAULTS = {
@@ -24,7 +26,7 @@ const DEFAULTS = {
   lowerExponent: -16,
 } as const;
 
-const NUMERIC = /^(-?)(\d*)(?:\.(\d*))?$/;
+const NUMERIC = /^(-?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/;
 
 export function groupInteger(digits: string): string {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -46,6 +48,7 @@ export function formatNumber(raw: string, options: FormatNumberOptions = {}): st
   const maxSig = Math.max(1, Math.floor(options.significantDigits ?? DEFAULTS.significantDigits));
   const upper = options.upperExponent ?? DEFAULTS.upperExponent;
   const lower = options.lowerExponent ?? DEFAULTS.lowerExponent;
+  const forceScientific = options.notation === "scientific";
 
   if (raw === "" || raw === "-" || raw === "." || raw === "-.") {
     return raw;
@@ -57,9 +60,10 @@ export function formatNumber(raw: string, options: FormatNumberOptions = {}): st
   }
 
   const sign = match[1];
-  const trailingDot = raw.endsWith(".");
+  const trailingDot = !match[4] && raw.endsWith(".");
   const intPart = (match[2] || "0").replace(/^0+(?=\d)/, "");
   const fracPart = match[3] ?? "";
+  const inputExponent = match[4] ? Number(match[4]) : 0;
   const digits = intPart + fracPart;
   const firstSig = digits.search(/[1-9]/);
 
@@ -68,7 +72,7 @@ export function formatNumber(raw: string, options: FormatNumberOptions = {}): st
   }
 
   // Digits before the decimal point, measured from the first significant digit.
-  let point = intPart.length - firstSig;
+  let point = intPart.length - firstSig + inputExponent;
   let sig = digits.slice(firstSig);
 
   if (sig.length > maxSig) {
@@ -88,8 +92,9 @@ export function formatNumber(raw: string, options: FormatNumberOptions = {}): st
 
   const exponent = point - 1;
 
-  if (exponent >= upper || exponent <= lower) {
-    const mantissa = sig.length > 1 ? `${sig[0]}.${sig.slice(1)}` : sig;
+  if (forceScientific || exponent >= upper || exponent <= lower) {
+    const trimmed = sig.replace(/0+$/, "") || "0";
+    const mantissa = trimmed.length > 1 ? `${trimmed[0]}.${trimmed.slice(1)}` : trimmed;
     const exponentSign = exponent >= 0 ? "+" : "-";
     return `${sign}${mantissa}e${exponentSign}${Math.abs(exponent)}`;
   }

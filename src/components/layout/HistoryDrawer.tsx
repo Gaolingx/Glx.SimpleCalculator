@@ -69,6 +69,7 @@ export function HistoryDrawer({ mode, onNavigate }: HistoryDrawerProps) {
   const clear = useHistoryStore((state) => state.clear);
   const dispatch = useCalcStore((state) => state.dispatch);
   const grouping = useSettingsStore((state) => state.settings.grouping);
+  const angleUnit = useSettingsStore((state) => state.settings.angleUnit);
   const [confirming, setConfirming] = useState(false);
 
   const entries = useMemo(
@@ -134,6 +135,10 @@ export function HistoryDrawer({ mode, onNavigate }: HistoryDrawerProps) {
         const reset = await resetSession(entry.mode);
         useCalcStore.getState().setView(reset);
         await dispatch(recallCommand(entry));
+        if (entry.mode === "scientific") {
+          // `resetSession` builds a fresh engine with the default angle unit.
+          await dispatch({ type: "setAngleUnit", unit: angleUnit });
+        }
         onNavigate(PAGE_BY_MODE[entry.mode]);
         closeOverlay();
       } catch (cause) {

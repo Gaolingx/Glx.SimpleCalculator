@@ -34,6 +34,7 @@ export {
   normalizeHistory,
   readClipboardText,
   resetSession,
+  selectSession,
 } from "./ipc";
 export type {
   BinaryOp,

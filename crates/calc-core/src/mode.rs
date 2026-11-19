@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Top-level calculator mode. Also used as the history entry discriminator.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Mode {
     Basic,

@@ -59,6 +59,10 @@ fn commands_serialize_with_camel_case_tags() {
         json!({ "type": "toggleBit", "bit": 63 })
     );
     assert_eq!(
+        serde_json::to_value(CalcCommand::Random).unwrap(),
+        json!({ "type": "random" })
+    );
+    assert_eq!(
         serde_json::to_value(CalcCommand::SetExpression {
             text: "0xFF".into()
         })

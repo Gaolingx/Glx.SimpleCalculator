@@ -1,4 +1,38 @@
 {
   "title": "科学型",
-  "angleUnit": "角度制"
+  "angleUnit": "角度制",
+  "keypad": "科学计算键盘",
+  "notation": {
+    "toggle": "切换科学记数法"
+  },
+  "keys": {
+    "sin": "正弦",
+    "cos": "余弦",
+    "tan": "正切",
+    "asin": "反正弦",
+    "acos": "反余弦",
+    "atan": "反正切",
+    "sinh": "双曲正弦",
+    "cosh": "双曲余弦",
+    "tanh": "双曲正切",
+    "ln": "自然对数",
+    "log": "常用对数",
+    "exp": "指数函数",
+    "square": "平方",
+    "cube": "立方",
+    "power": "乘方",
+    "sqrt": "平方根",
+    "cubeRoot": "立方根",
+    "factorial": "阶乘",
+    "reciprocal": "倒数",
+    "abs": "绝对值",
+    "floor": "向下取整",
+    "ceil": "向上取整",
+    "round": "四舍五入",
+    "rand": "随机数",
+    "pi": "圆周率",
+    "e": "自然常数",
+    "openGroup": "左括号",
+    "closeGroup": "右括号"
+  }
 }

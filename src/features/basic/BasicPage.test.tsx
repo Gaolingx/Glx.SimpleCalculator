@@ -6,6 +6,7 @@ import i18n, { initI18n } from "../../i18n";
 import {
   emptyCalcView,
   type CalcCommand,
+  type CalcMode,
   type CalcView,
 } from "../../lib/ipc";
 import { DEFAULT_SETTINGS } from "../../lib/settings";
@@ -19,6 +20,7 @@ import { BasicPage } from "./BasicPage";
 const backend = vi.hoisted(() => ({
   tauri: true,
   calcCommand: vi.fn<(command: CalcCommand) => Promise<CalcView>>(),
+  selectSession: vi.fn<(mode: string) => Promise<CalcView>>(),
   addHistory: vi.fn<(input: unknown) => Promise<unknown[]>>(),
   copyText: vi.fn<(text: string) => Promise<void>>(),
   readClipboardText: vi.fn<() => Promise<string>>(),
@@ -30,6 +32,7 @@ vi.mock("../../lib/ipc", async (importOriginal) => {
     ...actual,
     isTauriRuntime: () => backend.tauri,
     calcCommand: backend.calcCommand,
+    selectSession: backend.selectSession,
     addHistory: backend.addHistory,
     copyText: backend.copyText,
     readClipboardText: backend.readClipboardText,
@@ -64,6 +67,10 @@ beforeEach(() => {
   backend.tauri = true;
   backend.calcCommand.mockReset();
   backend.calcCommand.mockResolvedValue(view());
+  backend.selectSession.mockReset();
+  backend.selectSession.mockImplementation(async (mode) =>
+    useCalcStore.getState().views[mode as CalcMode] ?? view(),
+  );
   backend.addHistory.mockReset();
   backend.addHistory.mockResolvedValue([]);
   backend.copyText.mockReset();

@@ -103,12 +103,13 @@ pub fn apply_unary(op: UnaryOp, value: Decimal) -> CalcResult<Decimal> {
     match op {
         Sqrt => sqrt(value),
         Square => multiply(value, value),
+        Cube => multiply(multiply(value, value)?, value),
         Reciprocal => divide(Decimal::ONE, value),
         Abs => Ok(value.abs()),
         Floor => Ok(value.floor()),
         Ceil => Ok(value.ceil()),
         Round => Ok(value.round_dp_with_strategy(0, RoundingStrategy::MidpointAwayFromZero)),
-        Cube | CubeRoot | Factorial | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh | Tanh
+        CubeRoot | Factorial | Sin | Cos | Tan | Asin | Acos | Atan | Sinh | Cosh | Tanh
         | Asinh | Acosh | Atanh | Ln | Log10 | Log2 | Exp => {
             Err(ErrorInfo::new(ErrorCode::Unsupported))
         }
@@ -134,7 +135,7 @@ pub(crate) fn is_scientific(op: UnaryOp) -> bool {
     use UnaryOp::*;
     matches!(
         op,
-        Cube | CubeRoot
+        CubeRoot
             | Factorial
             | Sin
             | Cos
@@ -208,6 +209,7 @@ mod tests {
     #[test]
     fn square_and_reciprocal() {
         assert_eq!(apply_unary(UnaryOp::Square, d("1.5")).unwrap(), d("2.25"));
+        assert_eq!(apply_unary(UnaryOp::Cube, d("2")).unwrap(), d("8"));
         assert_eq!(apply_unary(UnaryOp::Reciprocal, d("4")).unwrap(), d("0.25"));
         assert_eq!(
             apply_unary(UnaryOp::Reciprocal, d("0")).unwrap_err().code,
