@@ -1,0 +1,24 @@
+[package]
+name = "glx-calculator"
+description = "Glx Calculator desktop shell"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "glx_calculator_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { workspace = true, features = [] }
+
+[dependencies]
+calc-core.workspace = true
+tauri = { workspace = true, features = [] }
+tauri-plugin-clipboard-manager.workspace = true
+tauri-plugin-log.workspace = true
+tauri-plugin-opener.workspace = true
+tauri-plugin-store.workspace = true
+tauri-plugin-window-state.workspace = true

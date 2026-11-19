@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T0 完成**（2026-11-19）：workspace + `calc-core` 契约骨架 + 7 项测试通过；下一步 T1 |
+| 当前进度 | **T1 完成**（2026-11-19）：Tauri 2 + React 19 脚手架、插件与最小权限、CI、依赖锁定；下一步 T2 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -93,6 +93,14 @@ setx PATH "%PATH%;E:\node"
 
 > 注意：`tauri-plugin-clipboard-manager` 与 `tauri-plugin-window-state` 存在 `3.0.0-alpha`，**必须使用 2.x 稳定线**，不要误装 alpha。
 > 实施时用 `cargo add` / `npm i` 锁定到当时最新稳定版，并把 `Cargo.lock` / `package-lock.json` 一并提交。
+
+**T1 实测记录（2026-11-19）**
+
+- 实际解析版本：`tauri@2.11.6`、`@tauri-apps/api@2.11.1`、`@tauri-apps/cli@2.11.5`、`react@19.3.1`、`vite@8.3.8`、`typescript@7.0.2`、`vitest@5.1.1`；五个插件（clipboard-manager / log / opener / store / window-state）均落在 2.x 稳定线。
+- **Tauri 版本对齐**：`tauri dev` 会校验 Rust crate 与 `@tauri-apps/api` 的 major/minor 是否一致；crates.io 当前 2.x 最新为 `2.11.6`，而 npm 侧已到 2.12.x。因此 npm 两个包用 `~2.11.x` 固定（而非 `^2.12`），避免 “Found version mismatched Tauri packages”。crates.io 发布 2.12 后可同步升级。
+- **ESLint 偏差**：`typescript-eslint@8.73` 的 peer 范围仍为 `typescript >=4.8.4 <6.1.0`，与最新 `typescript@7.0.2` 冲突。因此 lint 门禁改用 `oxlint@1.94`（原生 TS 解析，含 react/typescript 插件），脚本名保持 `npm run lint`；待 typescript-eslint 支持 TS 7 后可直接替换，不影响其他门禁。
+- 图标：`src-tauri/icons/app-icon.png` 为程序化生成的占位源图（紫底白色等号），经 `tauri icon` 展开为多尺寸 PNG/ICO/ICNS；`android/`、`ios/` 产物已删除（本迭代不做移动端，见 2.2）。
+- 本地验证：`npm run typecheck` / `npm run lint` / `npm run test` / `npm run build`、`cargo fmt --check` / `cargo clippy -D warnings` / `cargo test --workspace` 全部通过；前端产物 JS 219.7 kB（gzip 68.7 kB），低于 250 kB 预算。
 
 ### 1.4 参考截图 → 布局结论
 
@@ -412,6 +420,7 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 | 核心 | `crates/calc-core/src/units/*`、`date.rs`、`worksheet/*` | 新建 | T12–T15 |
 | 核心测试 | `crates/calc-core/tests/*`、`tests/golden/*.json` | 新建 | 随 T4 起 |
 | Tauri | `src-tauri/Cargo.toml`、`tauri.conf.json`、`build.rs`、`capabilities/default.json` | 新建 | T1 |
+| Tauri | `src-tauri/icons/*`（占位源图 + `tauri icon` 生成） | 新建 | T1、T17 |
 | Tauri | `src-tauri/src/{main,lib}.rs`、`commands/*`、`state.rs`、`storage.rs`、`currency.rs` | 新建 | T1、T7、T13 |
 | 前端 | `package.json`、`package-lock.json`、`vite.config.ts`、`tsconfig.json`、`index.html` | 新建 | T1 |
 | 前端 | `src/styles/*`、`src/components/ui/*`、`layout/*` | 新建 | T2–T3 |
@@ -581,7 +590,7 @@ src/i18n/locales/en-US/...（同构）
 | ID | 任务 | 里程碑 | 依赖 | 交付物 | 验证 | 状态 |
 |---|---|---|---|---|---|---|
 | T0 | 环境与模块边界冻结 | M0 | — | PATH 约定、根 `Cargo.toml` workspace、`crates/calc-core` 契约骨架（`error/view/mode/command`）、`.gitignore`、本文档 3.10/3.11 | `cargo test -p calc-core`；`cargo check --workspace` | done |
-| T1 | Tauri + React 脚手架 + CI | M0 | T0 | `src-tauri` 配置/插件/权限、Vite/TS/ESLint、`package-lock.json`、`.github/workflows/ci.yml` | `npm install`；`npm run tauri dev`；CI 绿 | pending |
+| T1 | Tauri + React 脚手架 + CI | M0 | T0 | `src-tauri` 配置/插件/权限、Vite/TS/oxlint（见 1.3）、`package-lock.json`、`.github/workflows/ci.yml` | `npm install`；`npm run tauri dev`；CI 绿 | done |
 | T2 | 设计系统 + i18n + 主题 | M0 | T1 | `tokens.css`（双主题）、字体、`SoftButton/Card/Input/Tooltip/Toast`、i18n 初始化与 zh/en 骨架 | 两主题/两语言截图；`check:i18n` | pending |
 | T3 | 窗口外壳 + 导航 + 设置 | M0 | T2 | `TitleBar`/`CaptionButtons`/`NavRail`/路由（7 页占位）、设置页与 store 读写、Spike A/B | 拖拽/缩放/关闭；重启保留设置；DPI 100/150 | pending |
 | T4 | 核心 v1：值/解析/基本引擎 | M1 | T0 | `value/parser/engine/ops::basic`、错误、记忆、≥60 单测 | `cargo test -p calc-core` | pending |
@@ -614,7 +623,7 @@ src/i18n/locales/en-US/...（同构）
 **任务**
 - [x] T0：配置 PATH（`export PATH="/e/node:$PATH"` / `setx PATH "%PATH%;E:\node"`），验证 `node -v`、`npm -v`
 - [x] T0：根 `Cargo.toml` workspace（先含 `crates/calc-core`，T1 加入 `src-tauri`）+ 契约骨架 + `.gitignore`
-- [ ] T1：初始化 Tauri 2 + React 19 + TS + Vite；插件与 capabilities 最小权限；CI
+- [x] T1：初始化 Tauri 2 + React 19 + TS + Vite；插件与 capabilities 最小权限；CI
 - [ ] T2：`tokens.css`（双主题）+ 基础控件 + 字体本地化 + i18n 骨架
 - [ ] T3：窗口 440×820、最小 380×640、`decorations:false`、`transparent:false`；`TitleBar` + `NavRail` + 路由占位（7 个主页面 + 2 个覆盖层，见 2.0）
 - [ ] T3：设置页与 store 读写（主题/语言/分组/角度制/字宽/进制/历史开关）
@@ -987,6 +996,7 @@ rm -rf src-tauri/target/release/bundle
 | 12 | 1.1 / 2.0 | 单位“11 类”是否等于 11 个导航项不清 | 明确为 1 个转换页面 + 11 个二级类目 |
 | 13 | 4.7 / 6 | 错误态恢复规则粗略 | 明确数字/退格恢复、运算符先清除、Esc/C 立即清除 |
 | 14 | 3.10 / 7 | 模块职责、测试归属、清理归属分散 | 增补 3.10 边界、7.0 测试归属、第 12 节收尾 |
+| 15 | 1.3 / 6.0 T1 | `typescript-eslint` 不支持 TS 7，原定 ESLint 无法落地 | 改用 `oxlint@1.94`；1.3 记录偏差与回溯条件 |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 
