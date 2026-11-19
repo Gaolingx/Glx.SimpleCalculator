@@ -11,6 +11,7 @@ pub mod error;
 pub mod mode;
 pub mod ops;
 pub mod parser;
+pub mod units;
 pub mod value;
 pub mod view;
 
@@ -18,5 +19,9 @@ pub use command::{BinaryOp, CalcCommand, ConstantId, MemoryOp, StatOp, UnaryOp};
 pub use engine::Engine;
 pub use error::{CalcResult, ErrorCode, ErrorInfo};
 pub use mode::{AngleUnit, Mode, Radix, WordSize};
+pub use units::{RateTable, UnitCategory};
 pub use value::Number;
-pub use view::{CalcView, ProgrammerView, StatisticsView};
+pub use view::{
+    CalcView, ProgrammerView, StatisticsView, UnitCatalog, UnitCategoryInfo, UnitConversion,
+    UnitInfo,
+};

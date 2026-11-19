@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T11 完成**（2026-11-19）：统计型（数据集面板 / 12 个统计函数 / Kahan 求和）；下一步 T12 |
+| 当前进度 | **T12 完成**（2026-11-19）：单位注册表 + 转换页（11 类；汇率数据接入留 T13）；下一步 T13 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -226,6 +226,19 @@ setx PATH "%PATH%;E:\node"
 - 截图：`docs/qa/2026-11-19/t11-{light,dark}-{zh-CN,en-US}-statistics.png` + `t11-light-zh-CN-statistics-empty.png`。
 
 
+**T12 实测记录（2026-11-19）**
+
+- 内核：新增 `units` 模块。11 个类目（汇率/长度/面积/体积/质量/温度/速度/角度/压力/功率/时间）与单位元数据集中在静态注册表；线性单位以“到基准单位的十进制系数”表示（长度基准 m、面积 m²、体积 L、质量 kg、速度 km/h、角度 °、压力 Pa、功率 W、时间 s），系数全部为精确十进制（`0.3048`、`1609.344`、`3.785411784`、`745.69987158227022` 等），换算使用 `Decimal::checked_mul/checked_div`。
+- 温度：单独走仿射路径，经摄氏中转（`(F-32)×5/9`、`K-273.15`），避免预先把非终止小数偏移量截断；`98.6°F → 37°C → 98.6°F` 往返一致。货币：`RateTable` 以 EUR 为基准（`rate(code)` 表示 1 EUR 兑该币种），交叉汇率 `value / rate(from) × rate(to)`；本任务只提供纯函数与固定 fixture 测试，T13 注入 ECB 缓存后即可启用。
+- 校验：未知单位返回 `UNKNOWN_UNIT`（`args` 带 id）；非法数值 / 不允许的负值返回 `INVALID_INPUT`；Decimal 溢出返回 `OVERFLOW`。负值仅允许温度、速度、角度、汇率；长度/面积/体积/质量/压力/功率/时间拒绝负值。
+- 目录：`units_catalog` 返回 11 类 × 单位 `{id, symbol}`（导航顺序，id 全局唯一）；单位名由前端 `units:names.<id>` 翻译，缺失时回退到 symbol。`convert_unit(category, value, from, to)` 返回 `{value}` 规范原始值；汇率在 T13 前返回 `CURRENCY_OFFLINE`。
+- 页面：新增 `SoftCombobox`（portal 列表、视口夹取/翻转、`aria-activedescendant`、方向键/Home/End/Enter/Esc/Tab、首字母跳转、外点关闭）。`ConverterPage` 为“类别下拉 → 输入值 → 从/到双下拉 + 圆形换向 → 全宽结果卡片”；输入 120ms 防抖，响应以请求键校验，避免快速切换时旧结果覆盖；类别切换重置为前两个单位并保留输入值；换向只交换单位。结果按 12 位有效数字展示（汇率为 6 位），复制原始值；空输入显示占位，错误显示本地化文案，汇率额外提示“将在联网后更新”；加载失败提供重试。
+- 测试：Rust 203 项（calc-core 183 = lib 133 + 契约 8 + 黄金 1 + 程序员 16 + 科学 9 + 统计 11 + 单位 5；shell 20）；前端 150 项（新增 `SoftCombobox` 6、`ConverterPage` 8）。覆盖每类 3 组黄金值、温度三标度往返、货币交叉汇率、未知单位/负值/非法输入、目录完整性与契约序列化。
+- 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -- -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 381.03 kB（gzip 119.26 kB）、CSS 44.85 kB（gzip 7.57 kB），仍在 250 kB gzip 预算内。
+- QA（Edge headless CDP，440×820）：`documentElement` 440/440、820/820，`main` 376/376、776/776，全部按钮在视口内；light/dark × zh-CN/en-US 四组均显示 `1 km = 1,000 m`，0 console error。交互验证：目标单位切英尺 → `3,280.83989501`；换向后 `1 ft = 0.0003048 km`；类别切温度 → `1 °C = 33.8 °F`；类别切汇率 → 显示「汇率数据不可用」与联网提示；复制写入规范值 `0.001`（切回长度后默认 m→km）。截图流程通过注入 mock `__TAURI_INTERNALS__` 渲染真实前端，`units_catalog/convert_unit` 的 Rust 行为由集成测试覆盖。
+- 截图：`docs/qa/2026-11-19/t12-{light,dark}-{zh-CN,en-US}-converter.png` + `t12-light-zh-CN-converter-options.png`（类别下拉）+ `t12-light-zh-CN-converter-currency.png`（离线提示）。
+
+
 ### 1.4 参考截图 → 布局结论
 
 - 自定义标题栏：左侧应用名 + `dev` 徽标，右侧最小化/最大化/关闭；内容区可拖拽。
@@ -386,6 +399,7 @@ Glx.SimpleCalculator/
 | 科学型 | `f64`（三角/对数/幂） | 12–15 位有效数字；`|x|≥1e12` 或 `<1e-9` 用 E 记法；去尾零 | 定义域错误 → `DomainError`；`n!` 限 0–170 |
 | 程序员 | `i64` + `wrapping_*` + 字宽掩码 | 按进制分组：二进制/十六进制 4 位、八进制 3 位、十进制 3 位 | 非整数/非法字符 → `InvalidInput`；除法零 |
 | 统计 | `f64` + Kahan 求和 | 6–12 位有效数字（可配置） | 空集/样本数不足 → `DomainError` |
+| 单位（物理量） | `rust_decimal`；温度仿射、货币用注入汇率 | 12 位有效数字；E 记法阈值与前文一致 | 未知单位 → `UnknownUnit`；非法/不允许的负值 → `InvalidInput`；溢出 → `Overflow` |
 
 > 格式化（分组、有效数字、E 记法、进制分组）统一在 TS `lib/format.ts` 实现，Rust 只返回**规范化原始值**（decimal 字符串 / i64 / f64），避免前后端两套格式化逻辑。
 > 贷款月供使用 `(1+r)^-n` 的整数指数形式（`Decimal::powi`），不使用小数幂；除不尽时只允许在最终展示阶段舍入。
@@ -443,6 +457,7 @@ pub enum CalcCommand {
 > T7 新增 `clipboard_read`（系统剪贴板读取，空剪贴板返回空串）；粘贴清洗与右键菜单均在前端，清洗长度上限 1,000 字符。
 > T8 新增 `CalcCommand::Random`（`{"type":"random"}`）与 `session_select(mode)`：会话按窗口 + 模式隔离，页面挂载时激活；科学值可落为 `Number::Float`（最多 15 位有效数字，E 记法），`Decimal` 路径保持精确。
 > T9 新增 `UnaryOp::Not`（`{"type":"unary","op":"not"}`）；`Digit { digit }` 协议接受 0–15 以覆盖十六进制 A–F，程序员内核按当前 radix 拦截越界数字。`ProgrammerView` 的 `decimal` 为有符号投影，其余进制为字宽内无符号补码，`bits` 为固定字宽的 MSB-first 串。
+> T12 新增纯函数命令 `units_catalog()` → `UnitCatalog { categories[{id, units[{id, symbol}]}] }` 与 `convert_unit(category, value, from, to)` → `{value}`；业务错误以 `ErrorInfo` 返回（`UNKNOWN_UNIT` / `INVALID_INPUT` / `OVERFLOW` / `CURRENCY_OFFLINE`）。汇率表由 T13 注入；本任务货币换算固定返回 `CURRENCY_OFFLINE`。
 
 契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
@@ -734,7 +749,7 @@ src/i18n/locales/en-US/...（同构）
 | T9 | 程序员核心 | M4 | T4 | 进制/字宽/位运算/旋转/补码、真值表与属性测试 | 掩码、环绕、BYTE/QWORD 边界 | done |
 | T10 | 程序员 UI | M4 | T9 | 进制/字宽切换、四进制显示、位网格、无效输入拦截 | 点击翻转位；切换进制同步 | done |
 | T11 | 统计型 | M5 | T4 | 数据集面板、统计函数、空集/单元素边界 | 与 Excel 样本一致 | done |
-| T12 | 单位注册表 + 转换页 | M6 | T3 | 11 类单位数据、`convert_unit`、双下拉/换向 UI | 每类 3 组黄金值；温度往返 | pending |
+| T12 | 单位注册表 + 转换页 | M6 | T3 | 11 类单位数据、`convert_unit`、双下拉/换向 UI | 每类 3 组黄金值；温度往返 | done |
 | T13 | 汇率 | M6 | T12 | ECB 拉取/解析/缓存/TTL/离线 UI/手动刷新 | 断网缓存；5s 限速；交叉汇率 | pending |
 | T14 | 日期计算 | M7 | T3 | 日期差/加减、`DatePicker`、本地化格式 | 闰年/月末夹取单测 | pending |
 | T15 | 工作表 | M8 | T3 | 注册表、抵押/油耗/租赁、通用表单与结果卡 | 黄金月供 ±0.01；字段级校验 | pending |
@@ -857,12 +872,12 @@ npm run typecheck && npm run test
 ### M6 单位转换（2 人日）
 
 **任务**
-- [ ] 11 类单位注册表（id、符号、系数、仿射偏移）；单位名 i18n
-- [ ] `convert_unit` 纯函数：双向换算、精度、极值（E 记法）
-- [ ] 转换页 UI：`SoftCombobox` 双下拉 + 换向按钮 + 输入/结果卡片 + 复制
-- [ ] 汇率：ECB 拉取、XML 解析、缓存、启动刷新、手动刷新、离线提示
-- [ ] 校验：非法输入、负值（长度/质量）、温度为负数合法
-- [ ] 单测：每类至少 3 组已知换算；温度往返（C↔F↔K）；汇率交叉换算
+- [x] 11 类单位注册表（id、符号、系数、仿射偏移）；单位名 i18n
+- [x] `convert_unit` 纯函数：双向换算、精度、极值（E 记法）
+- [x] 转换页 UI：`SoftCombobox` 双下拉 + 换向按钮 + 输入/结果卡片 + 复制
+- [ ] 汇率：ECB 拉取、XML 解析、缓存、启动刷新、手动刷新、离线提示（T13）
+- [x] 校验：非法输入、负值（长度/质量）、温度为负数合法
+- [x] 单测：每类至少 3 组已知换算；温度往返（C↔F↔K）；汇率交叉换算
 
 **验收**
 - `1 km = 1000 m`、`0 °C = 32 °F = 273.15 K`、`1 MPa = 1000 kPa`
@@ -1140,6 +1155,7 @@ rm -rf src-tauri/target/release/bundle
 | 22 | 3.5 / 3.7 | 科学型声明 f64，但会话值与历史存储原为单一 Decimal（96 位上限约 7.9e28，无法容纳 170!） | T8 引入 `Number::{Decimal,Float}`：精确运算仍走 Decimal，科学结果与超大数走 f64；f64 规范化 15 位有效数字并保留 E 记法；`n!>170` 为 `OVERFLOW`，负数/非整数为 `DOMAIN_ERROR` |
 | 23 | 3.4 / 3.6 | 单窗口仅一个 Engine，切到科学页会沿用基本模式（科学键返回 `UNSUPPORTED`），历史恢复后角度制也会丢失 | T8 改为每窗口 + 每模式一个 Engine，新增 `session_select(mode)`；页面挂载激活对应会话，历史恢复科学条目后重新下发当前角度制 |
 | 24 | 4.7 / T6 | 一元函数结果按 `=` 会把表达式行与历史退化为 `0.5 =`，且定义域错误会清空 `tan(90)` | T8 让一元表达式在按 `=` 时保留（`sin(30) =`），并在求值前写入表达式，使定义域错误仍显示原输入 |
+| 25 | 3.5 / 6.0 T12 | 货币换算在 T12 尚无汇率数据，容易与“11 类全部可用”混淆 | T12 交付 11 类元数据、纯交叉换算与 fixture 测试；`convert_unit` 对货币返回 `CURRENCY_OFFLINE`，页面提示联网后更新；T13 注入 ECB 缓存后启用。负值策略同时明确：温度/速度/角度/汇率允许，长度/面积/体积/质量/压力/功率/时间拒绝 |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 

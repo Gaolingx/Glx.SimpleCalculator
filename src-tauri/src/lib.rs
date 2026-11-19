@@ -9,6 +9,7 @@ mod clipboard;
 mod history;
 mod session;
 mod settings;
+mod units;
 
 use tauri::Manager;
 
@@ -47,6 +48,8 @@ pub fn run() {
             history::history_clear,
             clipboard::clipboard_copy,
             clipboard::clipboard_read,
+            units::units_catalog,
+            units::convert_unit,
         ])
         .run(tauri::generate_context!())
         .expect("failed to launch Glx Calculator");

@@ -192,6 +192,47 @@ export interface StatisticsView {
   data: string[];
 }
 
+/** Mirrors `calc_core::units::UnitCategory` (navigation order). */
+export const UNIT_CATEGORIES = [
+  "currency",
+  "length",
+  "area",
+  "volume",
+  "mass",
+  "temperature",
+  "speed",
+  "angle",
+  "pressure",
+  "power",
+  "time",
+] as const;
+
+export type UnitCategory = (typeof UNIT_CATEGORIES)[number];
+
+/** Mirrors `calc_core::view::UnitInfo`. */
+export interface UnitInfo {
+  id: string;
+  symbol: string;
+}
+
+/** Mirrors `calc_core::view::UnitCategoryInfo`. */
+export interface UnitCategoryInfo {
+  id: UnitCategory;
+  units: UnitInfo[];
+}
+
+/** Mirrors `calc_core::view::UnitCatalog`; names are translated by the UI. */
+export interface UnitCatalog {
+  categories: UnitCategoryInfo[];
+}
+
+export interface UnitConversionInput {
+  category: UnitCategory;
+  value: string;
+  from: string;
+  to: string;
+}
+
 /** Mirrors `calc_core::view::CalcView`. */
 export interface CalcView {
   mode: CalcMode;
@@ -502,4 +543,47 @@ export async function readClipboardText(): Promise<string> {
   }
   const text = await invokeCommand<unknown>("clipboard_read");
   return typeof text === "string" ? text : "";
+}
+
+function normalizeUnitCatalog(value: unknown): UnitCatalog {
+  if (!isRecord(value) || !Array.isArray(value.categories)) {
+    return { categories: [] };
+  }
+  const categories = value.categories.flatMap((entry) => {
+    if (!isRecord(entry) || !isOneOf(entry.id, UNIT_CATEGORIES)) {
+      return [];
+    }
+    if (!Array.isArray(entry.units)) {
+      return [];
+    }
+    const units = entry.units.flatMap((unit) => {
+      if (
+        !isRecord(unit) ||
+        typeof unit.id !== "string" ||
+        unit.id === "" ||
+        typeof unit.symbol !== "string"
+      ) {
+        return [];
+      }
+      return [{ id: unit.id, symbol: unit.symbol }];
+    });
+    return units.length > 0 ? [{ id: entry.id, units }] : [];
+  });
+  return { categories };
+}
+
+export async function fetchUnitCatalog(): Promise<UnitCatalog> {
+  if (!isTauriRuntime()) {
+    return { categories: [] };
+  }
+  return normalizeUnitCatalog(await invokeCommand<unknown>("units_catalog"));
+}
+
+/** Returns the canonical, ungrouped conversion result. */
+export async function convertUnit(input: UnitConversionInput): Promise<string> {
+  const result = await invokeCommand<unknown>("convert_unit", { ...input });
+  if (!isRecord(result) || typeof result.value !== "string" || result.value === "") {
+    throw new IpcError("INTERNAL");
+  }
+  return result.value;
 }

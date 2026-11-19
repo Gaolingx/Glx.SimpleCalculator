@@ -145,3 +145,28 @@
 
 - `t11-light-zh-CN-statistics.png`、`t11-light-en-US-statistics.png`、`t11-dark-zh-CN-statistics.png`、`t11-dark-en-US-statistics.png`（440×820，1x，均值结果）
 - `t11-light-zh-CN-statistics-empty.png`（清空后的空状态与空集提示）
+
+# T12 单位转换 — 2026-11-19
+
+- 方式：Edge headless CDP（440×820，1x，light/dark × zh-CN/en-US），`Page.addScriptToEvaluateOnNewDocument` 注入 mock `__TAURI_INTERNALS__`（目录与换算结果）渲染真实前端；内核换算与目录由 Rust 集成测试覆盖。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 布局 | `documentElement` 440/440、820/820；`main` 376/376、776/776；全部按钮在视口内，无横向/纵向溢出 |
+| 默认 | 长度 `1 km → m` = `1,000`，公式 `1 km = 1,000 m` |
+| 单位切换 | 目标改英尺 → `3,280.83989501` |
+| 换向 | `1 ft → km` = `0.0003048` |
+| 类别切换 | 温度默认 `°C → °F`，`1 °C` = `33.8 °F` |
+| 汇率 | 显示「汇率数据不可用」与「汇率数据将在联网后更新。」（T13 接入 ECB 数据） |
+| 复制 | 复制规范值 `0.001`（长度默认对调为 m→km） |
+| 下拉 | 类别列表 portal 渲染、选中项高亮、滚动正常 |
+| 主题/语言 | 四组均正常，0 console error |
+| 测试 | 前端 150 项、Rust 203 项通过 |
+
+## 截图
+
+- `t12-light-zh-CN-converter.png`、`t12-light-en-US-converter.png`、`t12-dark-zh-CN-converter.png`、`t12-dark-en-US-converter.png`（440×820，1x，`1 km = 1,000 m`）
+- `t12-light-zh-CN-converter-options.png`（类别下拉）
+- `t12-light-zh-CN-converter-currency.png`（汇率离线提示）

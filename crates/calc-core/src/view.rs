@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::ErrorInfo;
 use crate::mode::{Mode, Radix, WordSize};
+use crate::units::UnitCategory;
 
 /// Canonical state returned to the UI after every command.
 ///
@@ -61,4 +62,35 @@ pub struct ProgrammerView {
 #[serde(rename_all = "camelCase")]
 pub struct StatisticsView {
     pub data: Vec<String>,
+}
+
+/// Unit registry projection for the converter page.
+///
+/// Categories and units arrive in navigation order; `symbol` is
+/// locale-neutral and unit *names* are translated by the frontend.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnitCatalog {
+    pub categories: Vec<UnitCategoryInfo>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnitCategoryInfo {
+    pub id: UnitCategory,
+    pub units: Vec<UnitInfo>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnitInfo {
+    pub id: String,
+    pub symbol: String,
+}
+
+/// Result of a pure unit conversion; the value is canonical and ungrouped.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnitConversion {
+    pub value: String,
 }

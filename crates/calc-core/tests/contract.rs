@@ -1,6 +1,7 @@
 use calc_core::{
     AngleUnit, BinaryOp, CalcCommand, CalcView, ConstantId, ErrorCode, ErrorInfo, Mode,
-    ProgrammerView, Radix, StatOp, StatisticsView, UnaryOp, WordSize,
+    ProgrammerView, Radix, StatOp, StatisticsView, UnaryOp, UnitCatalog, UnitCategory,
+    UnitCategoryInfo, UnitConversion, UnitInfo, WordSize,
 };
 use serde_json::json;
 
@@ -219,6 +220,45 @@ fn statistics_view_serializes_canonical_data() {
 
     let decoded: CalcView = serde_json::from_value(encoded).unwrap();
     assert_eq!(decoded, view);
+}
+
+#[test]
+fn unit_catalog_serializes_camel_case_categories_and_units() {
+    let catalog = UnitCatalog {
+        categories: vec![UnitCategoryInfo {
+            id: UnitCategory::Length,
+            units: vec![UnitInfo {
+                id: "km".into(),
+                symbol: "km".into(),
+            }],
+        }],
+    };
+
+    let encoded = serde_json::to_value(&catalog).unwrap();
+    assert_eq!(
+        encoded,
+        json!({
+            "categories": [{
+                "id": "length",
+                "units": [{ "id": "km", "symbol": "km" }]
+            }]
+        })
+    );
+    let decoded: UnitCatalog = serde_json::from_value(encoded).unwrap();
+    assert_eq!(decoded, catalog);
+}
+
+#[test]
+fn unit_conversion_serializes_canonical_value() {
+    let conversion = UnitConversion {
+        value: "1000".into(),
+    };
+    assert_eq!(
+        serde_json::to_value(&conversion).unwrap(),
+        json!({ "value": "1000" })
+    );
+    let decoded: UnitConversion = serde_json::from_value(json!({ "value": "1000" })).unwrap();
+    assert_eq!(decoded, conversion);
 }
 
 #[test]

@@ -76,6 +76,15 @@ export function ConverterIcon(props: AppIconProps) {
   );
 }
 
+export function SwapIcon(props: AppIconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M8 4.5v15M8 19.5l-3-3M8 19.5l3-3" />
+      <path d="M16 19.5v-15M16 4.5l-3 3M16 4.5l3 3" />
+    </Svg>
+  );
+}
+
 export function WorksheetsIcon(props: AppIconProps) {
   return (
     <Svg {...props}>

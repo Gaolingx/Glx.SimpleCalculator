@@ -2,6 +2,8 @@ export { SoftButton } from "./SoftButton";
 export type { SoftButtonProps, SoftButtonSize, SoftButtonVariant } from "./SoftButton";
 export { SoftCard } from "./SoftCard";
 export type { SoftCardPadding, SoftCardProps } from "./SoftCard";
+export { SoftCombobox } from "./SoftCombobox";
+export type { ComboboxOption, SoftComboboxProps } from "./SoftCombobox";
 export { SoftInput } from "./SoftInput";
 export type { SoftInputProps } from "./SoftInput";
 export { SoftMenu } from "./SoftMenu";
