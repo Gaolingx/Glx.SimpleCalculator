@@ -35,6 +35,12 @@ describe("commandForKeyboard", () => {
     expect(commandForKeyboard({ key: "@" })).toEqual({ type: "unary", op: "sqrt" });
   });
 
+  it("leaves statistics input to the form field", () => {
+    expect(commandForKeyboard({ key: "7" }, "statistics")).toBeNull();
+    expect(commandForKeyboard({ key: "Enter" }, "statistics")).toBeNull();
+    expect(commandForKeyboard({ key: "Escape" }, "statistics")).toBeNull();
+  });
+
   it("ignores modifier chords and unhandled keys", () => {
     expect(commandForKeyboard({ key: "c", ctrlKey: true })).toBeNull();
     expect(commandForKeyboard({ key: "5", altKey: true })).toBeNull();

@@ -28,6 +28,12 @@ export function commandForKeyboard(
     return programmerCommand(key);
   }
 
+  // Statistics input lives in a form field; the session takes structured
+  // stats* commands only, so global calculation shortcuts do not apply.
+  if (mode === "statistics") {
+    return null;
+  }
+
   if (key.length === 1 && key >= "0" && key <= "9") {
     return { type: "digit", digit: key.charCodeAt(0) - 48 };
   }

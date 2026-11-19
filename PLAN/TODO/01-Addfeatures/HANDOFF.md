@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T10 完成**（2026-11-19）：程序员 UI（四进制同步 / 位网格 / 进制与字宽切换）；下一步 T11 |
+| 当前进度 | **T11 完成**（2026-11-19）：统计型（数据集面板 / 12 个统计函数 / Kahan 求和）；下一步 T12 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -212,6 +212,18 @@ setx PATH "%PATH%;E:\node"
 - 门禁：`cargo fmt --check` / `clippy -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 358.60 kB（gzip 111.93 kB）、CSS 34.83 kB（gzip 6.42 kB），仍在 250 kB gzip 预算内。
 - QA（Edge headless CDP，440×820）：BYTE/QWORD 页面均无横向或纵向溢出；`HEX/DEC/OCT/BIN` 四行同步（`FF / -1 / 377 / 1111 1111`），点击 BIN 后 2 与 A 键禁用、点击首位后 `FF → 7F`；light/dark × zh-CN/en-US 四组截图正常。截图流程通过 `Page.addScriptToEvaluateOnNewDocument` 注入 mock `__TAURI_INTERNALS__` 以渲染真实前端；真实 Rust IPC 未在本轮点击验证，内核行为由 T9 集成测试覆盖。
 - 截图：`docs/qa/2026-11-19/t10-{light,dark}-{zh-CN,en-US}-programmer.png` + `t10-light-zh-CN-programmer-qword.png`。
+
+**T11 实测记录（2026-11-19）**
+
+- 内核：新增 `ops::statistics` 与 `engine::statistics`。`StatisticsSession` 持有 `Vec<f64>` 数据集、表达式与结果；`Engine` 在 `Mode::Statistics` 下路由到该会话，窗口/模式隔离沿用 `SessionMap`。数据集上限 1,000 项，值经 `value::parse_number` 归一化（分组符、全角、指数与 `-0` 统一）。
+- 统计语义：`Σx/Σx²` 使用 Kahan 补偿求和，均值/方差为两遍算法；`variance` 为样本方差（与 `s` 配对），`σ` 为总体标准差。空集对全部函数返回 `DOMAIN_ERROR`；样本方差/标准差在 `n<2` 时返回 `DOMAIN_ERROR`；非有限中间值返回 `OVERFLOW`。众数返回并列最高频的全部数值，升序以 `, ` 连接；无并列时返回全部数值（文档约定的“全部列出”）。
+- 契约：新增 `StatOp` 与 `statsAdd/statsUpdate/statsRemove/statsClear/statsCompute` 命令；`CalcView.statistics: Option<StatisticsView { data: Vec<String> }>`，数据为未分组的规范化值，编辑按原始下标寻址。`Recall` 仅恢复表达式与结果展示，不改动数据集；数据集的增删改清空会清除旧结果卡片。
+- 页面：`StatisticsPage` 由数值输入（添加/更新/取消）、结果卡片（复制、错误与空集/单元素提示）、数据集面板（计数、排序、清空二次确认、逐行编辑/删除）和 12 键函数网格组成。排序仅改变显示顺序，编辑/删除仍使用原始下标；结果按 12 位有效数字展示，复制取原始值。
+- 历史与输入：`useCalculatorSession.send` 改为返回 `Promise<CalcView | null>`，`statsCompute` 在表达式以 `=` 结尾时写入历史；统计模式的全局键盘计算映射与 Ctrl+V 粘贴被关闭（输入框内仍可正常编辑/粘贴），Ctrl+C 复制结果。
+- 测试：Rust 179 项（calc-core 162 = lib 119 + 契约 6 + 黄金 1 + 程序员 16 + 科学 9 + 统计集成 11；shell 17）；前端 136 项（新增 `StatisticsPage` 10、统计模式键盘 1）。覆盖 1..10 与 Excel 对齐、并列众数、空集/单元素、非有限溢出、增改删清空、历史恢复与视图契约。
+- 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -- -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 367.50 kB（gzip 114.43 kB）、CSS 39.52 kB（gzip 7.01 kB），仍在 250 kB gzip 预算内。
+- QA（Edge headless CDP，440×820）：`documentElement` 440/440、820/820，`main` 376/376，全部按钮在视口内；light/dark × zh-CN/en-US 四组均显示 10 项数据、`mean(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) = 5.5`，0 console error。交互验证：添加 `11`（11 项）、编辑首项为 `2`、删除首项（10 项）、排序 `录入 → 升序 → 降序`（降序下标 `9…0`）、清空确认（0 项）、空集点击 `Σx` 显示“请先添加至少一个数值”。截图流程通过注入 mock `__TAURI_INTERNALS__` 渲染真实前端，内核行为由 Rust 集成测试覆盖。
+- 截图：`docs/qa/2026-11-19/t11-{light,dark}-{zh-CN,en-US}-statistics.png` + `t11-light-zh-CN-statistics-empty.png`。
 
 
 ### 1.4 参考截图 → 布局结论
@@ -721,7 +733,7 @@ src/i18n/locales/en-US/...（同构）
 | T8 | 科学型 | M3 | T4 | `ops::scientific`、科学键盘、角度制、F-E、定义域错误 | sin/cos/ln/阶乘/幂单测；RAD/DEG | done |
 | T9 | 程序员核心 | M4 | T4 | 进制/字宽/位运算/旋转/补码、真值表与属性测试 | 掩码、环绕、BYTE/QWORD 边界 | done |
 | T10 | 程序员 UI | M4 | T9 | 进制/字宽切换、四进制显示、位网格、无效输入拦截 | 点击翻转位；切换进制同步 | done |
-| T11 | 统计型 | M5 | T4 | 数据集面板、统计函数、空集/单元素边界 | 与 Excel 样本一致 | pending |
+| T11 | 统计型 | M5 | T4 | 数据集面板、统计函数、空集/单元素边界 | 与 Excel 样本一致 | done |
 | T12 | 单位注册表 + 转换页 | M6 | T3 | 11 类单位数据、`convert_unit`、双下拉/换向 UI | 每类 3 组黄金值；温度往返 | pending |
 | T13 | 汇率 | M6 | T12 | ECB 拉取/解析/缓存/TTL/离线 UI/手动刷新 | 断网缓存；5s 限速；交叉汇率 | pending |
 | T14 | 日期计算 | M7 | T3 | 日期差/加减、`DatePicker`、本地化格式 | 闰年/月末夹取单测 | pending |
@@ -832,11 +844,11 @@ npm run typecheck && npm run test
 ### M5 统计模式（1 人日）
 
 **任务**
-- [ ] 数据集面板（添加/编辑/删除/清空/排序显示）
-- [ ] 函数：`Σx Σx² x̄ s σ n median mode range min max variance`
-- [ ] 空集/单元素/全相同值的边界与提示
-- [ ] 结果卡片 + 复制 + 写入历史
-- [ ] Kahan 求和；显示精度策略
+- [x] 数据集面板（添加/编辑/删除/清空/排序显示）
+- [x] 函数：`Σx Σx² x̄ s σ n median mode range min max variance`
+- [x] 空集/单元素/全相同值的边界与提示
+- [x] 结果卡片 + 复制 + 写入历史
+- [x] Kahan 求和；显示精度策略
 
 **验收**
 - 已知样本（1..10）结果与 Excel 一致（容差内）

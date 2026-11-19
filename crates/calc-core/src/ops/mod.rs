@@ -14,6 +14,7 @@ use crate::value::Number;
 pub mod basic;
 pub mod programmer;
 pub mod scientific;
+pub mod statistics;
 
 pub fn evaluate(expr: &Expr, mode: Mode) -> CalcResult<Number> {
     match expr {

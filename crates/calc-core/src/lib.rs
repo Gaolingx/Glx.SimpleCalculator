@@ -14,9 +14,9 @@ pub mod parser;
 pub mod value;
 pub mod view;
 
-pub use command::{BinaryOp, CalcCommand, ConstantId, MemoryOp, UnaryOp};
+pub use command::{BinaryOp, CalcCommand, ConstantId, MemoryOp, StatOp, UnaryOp};
 pub use engine::Engine;
 pub use error::{CalcResult, ErrorCode, ErrorInfo};
 pub use mode::{AngleUnit, Mode, Radix, WordSize};
 pub use value::Number;
-pub use view::{CalcView, ProgrammerView};
+pub use view::{CalcView, ProgrammerView, StatisticsView};

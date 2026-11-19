@@ -123,3 +123,25 @@
 - `t8-light-zh-CN-scientific.png`、`t8-light-en-US-scientific.png`、`t8-dark-zh-CN-scientific.png`、`t8-dark-en-US-scientific.png`（440×820，1x，`sin(30)=0.5`）
 - `t8-tauri-verified.png`（真实 Tauri WebView2，`170!` 结果，772×1437 @175%）
 
+
+# T11 统计型 — 2026-11-19
+
+- 方式：Edge headless CDP（440×820，1x，light/dark × zh-CN/en-US），`Page.addScriptToEvaluateOnNewDocument` 注入 mock `__TAURI_INTERNALS__` 渲染真实前端；内核算法由 Rust 集成测试覆盖。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 布局 | `documentElement` 440/440、820/820；`main` 376/376；12 个函数键、10 行数据集全部在视口内，无横向/纵向溢出 |
+| 样本 | 数据 `1..10`，点击 `x̄` → `5.5`，表达式 `mean(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) =` |
+| 添加 | 输入 `11` → 11 项，结果卡片清空 |
+| 编辑 | 编辑第 1 项载入输入框；改为 `2` 后原位置更新 |
+| 删除/排序 | 删除首项回到 10 项；排序 `录入 → 升序 → 降序`，降序显示下标 `9…0` |
+| 清空/空集 | 二次确认后 0 项；点击 `Σx` 显示「请先添加至少一个数值。」 |
+| 主题/语言 | 四组均正常，0 console error |
+| 测试 | 前端 136 项、Rust 179 项通过 |
+
+## 截图
+
+- `t11-light-zh-CN-statistics.png`、`t11-light-en-US-statistics.png`、`t11-dark-zh-CN-statistics.png`、`t11-dark-en-US-statistics.png`（440×820，1x，均值结果）
+- `t11-light-zh-CN-statistics-empty.png`（清空后的空状态与空集提示）

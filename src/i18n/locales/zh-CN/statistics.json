@@ -1,4 +1,55 @@
 {
   "title": "统计型",
-  "dataset": "数据集"
+  "dataset": "数据集",
+  "count": "共 {{count}} 项",
+  "value": "数值",
+  "placeholder": "例如 12.5",
+  "add": "添加",
+  "update": "更新",
+  "cancelEdit": "取消编辑",
+  "empty": "暂无数据，先添加数值。",
+  "emptyHint": "请先添加至少一个数值。",
+  "needTwo": "样本统计至少需要两个数值。",
+  "result": "结果",
+  "resultHint": "选择下方函数计算结果",
+  "sort": {
+    "label": "排序",
+    "input": "按录入顺序",
+    "asc": "升序",
+    "desc": "降序"
+  },
+  "edit": "编辑第 {{index}} 个数值",
+  "delete": "删除第 {{index}} 个数值",
+  "clear": "清空",
+  "clearTitle": "清空数据集",
+  "clearConfirm": "将删除全部 {{count}} 个数值，此操作不可撤销。",
+  "functionsLabel": "统计函数",
+  "labels": {
+    "sum": "Σx",
+    "sumSquares": "Σx²",
+    "count": "n",
+    "mean": "x̄",
+    "median": "中位数",
+    "mode": "众数",
+    "sampleStdDev": "s",
+    "populationStdDev": "σ",
+    "variance": "s²",
+    "range": "极差",
+    "min": "最小值",
+    "max": "最大值"
+  },
+  "functions": {
+    "sum": "求和",
+    "sumSquares": "平方和",
+    "count": "数量",
+    "mean": "平均值",
+    "median": "中位数",
+    "mode": "众数",
+    "sampleStdDev": "样本标准差",
+    "populationStdDev": "总体标准差",
+    "variance": "样本方差",
+    "range": "极差",
+    "min": "最小值",
+    "max": "最大值"
+  }
 }

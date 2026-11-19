@@ -1,6 +1,6 @@
 use calc_core::{
     AngleUnit, BinaryOp, CalcCommand, CalcView, ConstantId, ErrorCode, ErrorInfo, Mode,
-    ProgrammerView, Radix, UnaryOp, WordSize,
+    ProgrammerView, Radix, StatOp, StatisticsView, UnaryOp, WordSize,
 };
 use serde_json::json;
 
@@ -81,6 +81,43 @@ fn commands_serialize_with_camel_case_tags() {
         .unwrap(),
         json!({ "type": "recall", "expression": "2 + 3 =", "value": "5" })
     );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::StatsAdd {
+            value: "1.5".into()
+        })
+        .unwrap(),
+        json!({ "type": "statsAdd", "value": "1.5" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::StatsUpdate {
+            index: 2,
+            value: "-4".into()
+        })
+        .unwrap(),
+        json!({ "type": "statsUpdate", "index": 2, "value": "-4" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::StatsRemove { index: 0 }).unwrap(),
+        json!({ "type": "statsRemove", "index": 0 })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::StatsClear).unwrap(),
+        json!({ "type": "statsClear" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::StatsCompute {
+            op: StatOp::SampleStdDev
+        })
+        .unwrap(),
+        json!({ "type": "statsCompute", "op": "sampleStdDev" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::StatsCompute {
+            op: StatOp::SumSquares
+        })
+        .unwrap(),
+        json!({ "type": "statsCompute", "op": "sumSquares" })
+    );
 }
 
 #[test]
@@ -95,6 +132,16 @@ fn commands_round_trip() {
         CalcCommand::Percent,
         CalcCommand::ToggleSign,
         CalcCommand::Equals,
+        CalcCommand::StatsAdd {
+            value: "1.5".into(),
+        },
+        CalcCommand::StatsUpdate {
+            index: 0,
+            value: "2".into(),
+        },
+        CalcCommand::StatsRemove { index: 0 },
+        CalcCommand::StatsClear,
+        CalcCommand::StatsCompute { op: StatOp::Median },
     ];
     for command in commands {
         let encoded = serde_json::to_string(&command).unwrap();
@@ -134,6 +181,7 @@ fn calc_view_uses_camel_case_and_null_optionals() {
             hexadecimal: "FF".into(),
             bits: "11111111".into(),
         }),
+        statistics: None,
         error: None,
     };
 
@@ -145,6 +193,29 @@ fn calc_view_uses_camel_case_and_null_optionals() {
     assert_eq!(encoded["programmer"]["radix"], "hexadecimal");
     assert_eq!(encoded["programmer"]["wordSize"], "byte");
     assert_eq!(encoded["programmer"]["bits"], "11111111");
+
+    let decoded: CalcView = serde_json::from_value(encoded).unwrap();
+    assert_eq!(decoded, view);
+}
+
+#[test]
+fn statistics_view_serializes_canonical_data() {
+    let view = CalcView {
+        mode: Mode::Statistics,
+        expression: "mean(1, 2) =".into(),
+        value: "1.5".into(),
+        memory: None,
+        programmer: None,
+        statistics: Some(StatisticsView {
+            data: vec!["1".into(), "2".into()],
+        }),
+        error: None,
+    };
+
+    let encoded = serde_json::to_value(&view).unwrap();
+    assert_eq!(encoded["mode"], "statistics");
+    assert_eq!(encoded["programmer"], serde_json::Value::Null);
+    assert_eq!(encoded["statistics"]["data"], json!(["1", "2"]));
 
     let decoded: CalcView = serde_json::from_value(encoded).unwrap();
     assert_eq!(decoded, view);
@@ -190,6 +261,22 @@ fn command_validation_rejects_out_of_range_values() {
         CalcCommand::Recall {
             expression: String::new(),
             value: "1".into()
+        }
+        .validate()
+        .unwrap_err()
+        .code,
+        ErrorCode::InvalidInput
+    );
+    assert!(
+        CalcCommand::StatsAdd {
+            value: "1e3".into()
+        }
+        .validate()
+        .is_ok()
+    );
+    assert_eq!(
+        CalcCommand::StatsAdd {
+            value: "1".repeat(1001)
         }
         .validate()
         .unwrap_err()

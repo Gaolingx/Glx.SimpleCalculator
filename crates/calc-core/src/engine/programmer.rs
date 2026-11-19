@@ -111,7 +111,12 @@ impl ProgrammerSession {
             | CalcCommand::OpenGroup
             | CalcCommand::CloseGroup
             | CalcCommand::Constant { .. }
-            | CalcCommand::Random => Err(ErrorInfo::new(ErrorCode::Unsupported)),
+            | CalcCommand::Random
+            | CalcCommand::StatsAdd { .. }
+            | CalcCommand::StatsUpdate { .. }
+            | CalcCommand::StatsRemove { .. }
+            | CalcCommand::StatsClear
+            | CalcCommand::StatsCompute { .. } => Err(ErrorInfo::new(ErrorCode::Unsupported)),
         };
 
         if let Err(err) = handled {
@@ -156,6 +161,7 @@ impl ProgrammerSession {
                 .memory
                 .map(|memory| prog::format(memory, self.radix, self.word_size)),
             programmer: Some(prog::view(current, self.radix, self.word_size)),
+            statistics: None,
             error: self.error.clone(),
         }
     }

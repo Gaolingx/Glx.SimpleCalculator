@@ -34,7 +34,8 @@ export interface CalculatorSession {
   menu: MenuPosition | null;
   setMenu: (menu: MenuPosition | null) => void;
   overlay: OverlayId | null;
-  send: (command: CalcCommand) => void;
+  /** Resolves with the resulting view, or `null` in preview/transport errors. */
+  send: (command: CalcCommand) => Promise<CalcView | null>;
   copyValue: (text: string) => void;
   handlePaste: () => void;
 }
@@ -78,24 +79,34 @@ export function useCalculatorSession(mode: CalcMode): CalculatorSession {
   }, [mode]);
 
   const send = useCallback(
-    (command: CalcCommand) => {
+    (command: CalcCommand): Promise<CalcView | null> => {
       setTransportError(null);
       if (!isTauriRuntime()) {
         setPreviewNotice(true);
-        return;
+        return Promise.resolve(null);
       }
-      queue.current = queue.current
+      const result = queue.current
         .then(() => dispatch(command))
         .then((next) => {
-          if (historyEnabled && command.type === "equals" && isCompletedCalculation(next)) {
+          if (
+            historyEnabled &&
+            (command.type === "equals" || command.type === "statsCompute") &&
+            isCompletedCalculation(next)
+          ) {
             void recordHistory({
               mode: next.mode,
               expression: next.expression,
               value: next.value,
             });
           }
+          return next;
         })
-        .catch((error: unknown) => setTransportError(toIpcError(error).code));
+        .catch((error: unknown) => {
+          setTransportError(toIpcError(error).code);
+          return null;
+        });
+      queue.current = result.then(() => undefined);
+      return result;
     },
     [dispatch, historyEnabled, recordHistory],
   );
@@ -154,6 +165,9 @@ export function useCalculatorSession(mode: CalcMode): CalculatorSession {
           setMenu(null);
           copyValue(view.value);
         } else if (key === "v") {
+          if (mode === "statistics") {
+            return;
+          }
           event.preventDefault();
           setMenu(null);
           handlePaste();

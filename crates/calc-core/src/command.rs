@@ -47,6 +47,25 @@ pub enum CalcCommand {
     },
     /// Scientific `rand`: a pseudo-random value in `[0, 1)`.
     Random,
+    /// Append a value to the statistics data set.
+    StatsAdd {
+        value: String,
+    },
+    /// Replace one statistics value; `index` is zero-based.
+    StatsUpdate {
+        index: usize,
+        value: String,
+    },
+    /// Remove one statistics value; `index` is zero-based.
+    StatsRemove {
+        index: usize,
+    },
+    /// Clear the whole statistics data set.
+    StatsClear,
+    /// Compute one statistics function over the current data set.
+    StatsCompute {
+        op: StatOp,
+    },
     /// Replace the current entry, used by paste.
     SetExpression {
         text: String,
@@ -129,6 +148,44 @@ pub enum ConstantId {
     E,
 }
 
+/// Statistics functions in the order exposed by the UI (HANDOFF §2.1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum StatOp {
+    Sum,
+    SumSquares,
+    Mean,
+    Median,
+    Mode,
+    Range,
+    SampleStdDev,
+    PopulationStdDev,
+    Count,
+    Min,
+    Max,
+    Variance,
+}
+
+impl StatOp {
+    /// ASCII name used in display-only expression lines.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Sum => "sum",
+            Self::SumSquares => "sumsq",
+            Self::Mean => "mean",
+            Self::Median => "median",
+            Self::Mode => "mode",
+            Self::Range => "range",
+            Self::SampleStdDev => "stdev_s",
+            Self::PopulationStdDev => "stdev_p",
+            Self::Count => "count",
+            Self::Min => "min",
+            Self::Max => "max",
+            Self::Variance => "variance",
+        }
+    }
+}
+
 impl CalcCommand {
     /// Commands are validated at the Tauri adapter boundary before reaching
     /// the engine; invalid values must never panic.
@@ -143,6 +200,11 @@ impl CalcCommand {
                 Err(ErrorInfo::new(crate::error::ErrorCode::InvalidInput))
             }
             Self::SetExpression { text } if text.chars().count() > 1000 => {
+                Err(ErrorInfo::new(crate::error::ErrorCode::InvalidInput))
+            }
+            Self::StatsAdd { value } | Self::StatsUpdate { value, .. }
+                if value.chars().count() > 1000 =>
+            {
                 Err(ErrorInfo::new(crate::error::ErrorCode::InvalidInput))
             }
             Self::Recall { expression, value }

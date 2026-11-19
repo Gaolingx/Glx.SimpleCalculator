@@ -18,6 +18,8 @@ pub struct CalcView {
     pub memory: Option<String>,
     /// Present only in programmer mode.
     pub programmer: Option<ProgrammerView>,
+    /// Present only in statistics mode.
+    pub statistics: Option<StatisticsView>,
     pub error: Option<ErrorInfo>,
 }
 
@@ -29,6 +31,7 @@ impl CalcView {
             value: String::new(),
             memory: None,
             programmer: None,
+            statistics: None,
             error: None,
         }
     }
@@ -48,4 +51,14 @@ pub struct ProgrammerView {
     pub decimal: String,
     pub hexadecimal: String,
     pub bits: String,
+}
+
+/// Statistics-mode data set.
+///
+/// `data` holds canonical, ungrouped values in entry order. Sorting for display
+/// is a frontend concern; edits address values by their original index.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StatisticsView {
+    pub data: Vec<String>,
 }

@@ -15,8 +15,10 @@ use crate::value::{self, Number};
 use crate::view::CalcView;
 
 mod programmer;
+mod statistics;
 
 use programmer::ProgrammerSession;
+use statistics::StatisticsSession;
 
 const PI: &str = "3.1415926535897932384626433833";
 const E: &str = "2.7182818284590452353602874714";
@@ -82,6 +84,7 @@ pub struct Engine {
     unary_expression: bool,
     rng_state: u64,
     programmer: ProgrammerSession,
+    statistics: StatisticsSession,
 }
 
 impl Default for Engine {
@@ -108,6 +111,7 @@ impl Engine {
             unary_expression: false,
             rng_state: random_seed(),
             programmer: ProgrammerSession::default(),
+            statistics: StatisticsSession::default(),
         }
     }
 
@@ -118,6 +122,9 @@ impl Engine {
     pub fn apply(&mut self, command: CalcCommand) -> CalcView {
         if self.mode == Mode::Programmer {
             return self.programmer.apply(command);
+        }
+        if self.mode == Mode::Statistics {
+            return self.statistics.apply(command);
         }
         if command.validate().is_err() {
             self.error = Some(ErrorInfo::new(ErrorCode::InvalidInput));
@@ -185,7 +192,12 @@ impl Engine {
                 self.constant(id);
                 Ok(())
             }
-            CalcCommand::ToggleBit { .. } => Err(ErrorInfo::new(ErrorCode::Unsupported)),
+            CalcCommand::ToggleBit { .. }
+            | CalcCommand::StatsAdd { .. }
+            | CalcCommand::StatsUpdate { .. }
+            | CalcCommand::StatsRemove { .. }
+            | CalcCommand::StatsClear
+            | CalcCommand::StatsCompute { .. } => Err(ErrorInfo::new(ErrorCode::Unsupported)),
             CalcCommand::Random => {
                 self.random();
                 Ok(())
@@ -209,6 +221,9 @@ impl Engine {
         if self.mode == Mode::Programmer {
             return self.programmer.view();
         }
+        if self.mode == Mode::Statistics {
+            return self.statistics.view();
+        }
         let value = match (&self.entry, self.result) {
             (Some(entry), _) => entry.raw.clone(),
             (None, Some(result)) => result.canonical(),
@@ -225,6 +240,7 @@ impl Engine {
             value,
             memory: self.memory.map(Number::canonical),
             programmer: None,
+            statistics: None,
             error: self.error.clone(),
         }
     }

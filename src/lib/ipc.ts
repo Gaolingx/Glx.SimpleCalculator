@@ -128,6 +128,21 @@ export type BinaryOp =
 export type MemoryOp = "clear" | "recall" | "add" | "subtract" | "store";
 export type ConstantId = "pi" | "e";
 
+/** Mirrors `calc_core::command::StatOp`. */
+export type StatOp =
+  | "sum"
+  | "sumSquares"
+  | "mean"
+  | "median"
+  | "mode"
+  | "range"
+  | "sampleStdDev"
+  | "populationStdDev"
+  | "count"
+  | "min"
+  | "max"
+  | "variance";
+
 /** Mirrors `calc_core::command::CalcCommand` (tagged by `type`). */
 export type CalcCommand =
   | { type: "digit"; digit: number }
@@ -149,6 +164,11 @@ export type CalcCommand =
   | { type: "constant"; id: ConstantId }
   | { type: "toggleBit"; bit: number }
   | { type: "random" }
+  | { type: "statsAdd"; value: string }
+  | { type: "statsUpdate"; index: number; value: string }
+  | { type: "statsRemove"; index: number }
+  | { type: "statsClear" }
+  | { type: "statsCompute"; op: StatOp }
   | { type: "setExpression"; text: string }
   | { type: "recall"; expression: string; value: string };
 
@@ -167,6 +187,11 @@ export interface ProgrammerView {
   bits: string;
 }
 
+/** Mirrors `calc_core::view::StatisticsView`; values stay canonical. */
+export interface StatisticsView {
+  data: string[];
+}
+
 /** Mirrors `calc_core::view::CalcView`. */
 export interface CalcView {
   mode: CalcMode;
@@ -174,6 +199,7 @@ export interface CalcView {
   value: string;
   memory: string | null;
   programmer: ProgrammerView | null;
+  statistics: StatisticsView | null;
   error: ErrorInfo | null;
 }
 
@@ -184,6 +210,7 @@ export function emptyCalcView(mode: CalcMode = "basic"): CalcView {
     value: "",
     memory: null,
     programmer: null,
+    statistics: null,
     error: null,
   };
 }
@@ -253,6 +280,15 @@ function normalizeProgrammerView(value: unknown): ProgrammerView | null {
   };
 }
 
+function normalizeStatisticsView(value: unknown): StatisticsView | null {
+  if (!isRecord(value) || !Array.isArray(value.data)) {
+    return null;
+  }
+  return {
+    data: value.data.filter((item): item is string => typeof item === "string"),
+  };
+}
+
 /** Defensive normalization so a malformed payload cannot crash the page. */
 export function normalizeCalcView(value: unknown): CalcView {
   if (!isRecord(value)) {
@@ -264,6 +300,7 @@ export function normalizeCalcView(value: unknown): CalcView {
     value: typeof value.value === "string" ? value.value : "",
     memory: typeof value.memory === "string" ? value.memory : null,
     programmer: normalizeProgrammerView(value.programmer),
+    statistics: normalizeStatisticsView(value.statistics),
     error: normalizeErrorInfo(value.error),
   };
 }

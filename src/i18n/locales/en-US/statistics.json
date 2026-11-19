@@ -1,4 +1,55 @@
 {
   "title": "Statistics",
-  "dataset": "Data set"
+  "dataset": "Data set",
+  "count": "Items: {{count}}",
+  "value": "Value",
+  "placeholder": "e.g. 12.5",
+  "add": "Add",
+  "update": "Update",
+  "cancelEdit": "Cancel",
+  "empty": "No data yet. Add a value to begin.",
+  "emptyHint": "Add at least one value first.",
+  "needTwo": "Sample statistics need at least two values.",
+  "result": "Result",
+  "resultHint": "Choose a function below to calculate",
+  "sort": {
+    "label": "Sort",
+    "input": "Entry order",
+    "asc": "Ascending",
+    "desc": "Descending"
+  },
+  "edit": "Edit value {{index}}",
+  "delete": "Delete value {{index}}",
+  "clear": "Clear",
+  "clearTitle": "Clear data set",
+  "clearConfirm": "Delete all {{count}} values? This cannot be undone.",
+  "functionsLabel": "Statistics functions",
+  "labels": {
+    "sum": "Σx",
+    "sumSquares": "Σx²",
+    "count": "n",
+    "mean": "x̄",
+    "median": "Median",
+    "mode": "Mode",
+    "sampleStdDev": "s",
+    "populationStdDev": "σ",
+    "variance": "s²",
+    "range": "Range",
+    "min": "Min",
+    "max": "Max"
+  },
+  "functions": {
+    "sum": "Sum",
+    "sumSquares": "Sum of squares",
+    "count": "Count",
+    "mean": "Mean",
+    "median": "Median",
+    "mode": "Mode",
+    "sampleStdDev": "Sample standard deviation",
+    "populationStdDev": "Population standard deviation",
+    "variance": "Sample variance",
+    "range": "Range",
+    "min": "Minimum",
+    "max": "Maximum"
+  }
 }
