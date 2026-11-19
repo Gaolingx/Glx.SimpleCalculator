@@ -14,10 +14,15 @@ export interface AppSettings {
   radix: Radix;
   historyEnabled: boolean;
   historyLimit: number;
+  /** Whole-UI zoom in percent; 100 is neutral. */
+  uiZoom: number;
 }
 
 export const HISTORY_LIMIT_MIN = 100;
 export const HISTORY_LIMIT_MAX = 1_000;
+export const UI_ZOOM_MIN = 50;
+export const UI_ZOOM_MAX = 250;
+export const UI_ZOOM_STEP = 25;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: "system",
@@ -28,6 +33,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   radix: "decimal",
   historyEnabled: true,
   historyLimit: 500,
+  uiZoom: 100,
 };
 
 const ANGLE_UNITS: readonly AngleUnit[] = ["deg", "rad", "grad"];
@@ -48,6 +54,16 @@ export function isValidHistoryLimit(value: number): boolean {
     value >= HISTORY_LIMIT_MIN &&
     value <= HISTORY_LIMIT_MAX
   );
+}
+
+export function isValidUiZoom(value: number): boolean {
+  return Number.isInteger(value) && value >= UI_ZOOM_MIN && value <= UI_ZOOM_MAX;
+}
+
+export function normalizeUiZoom(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(UI_ZOOM_MAX, Math.max(UI_ZOOM_MIN, Math.round(value)))
+    : DEFAULT_SETTINGS.uiZoom;
 }
 
 /**
@@ -84,6 +100,7 @@ export function normalizeSettings(value: unknown): AppSettings {
         ? value.historyEnabled
         : DEFAULT_SETTINGS.historyEnabled,
     historyLimit,
+    uiZoom: normalizeUiZoom(value.uiZoom),
   };
 }
 
@@ -103,6 +120,7 @@ export function settingsEqual(a: AppSettings, b: AppSettings): boolean {
     a.wordSize === b.wordSize &&
     a.radix === b.radix &&
     a.historyEnabled === b.historyEnabled &&
-    a.historyLimit === b.historyLimit
+    a.historyLimit === b.historyLimit &&
+    a.uiZoom === b.uiZoom
   );
 }

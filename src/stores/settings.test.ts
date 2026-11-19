@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_SETTINGS, type AppSettings } from "../lib/settings";
@@ -75,6 +76,18 @@ describe("settings store", () => {
     expect(useSettingsStore.getState().settings.grouping).toBe(false);
     expect(useSettingsStore.getState().settings.historyLimit).toBe(600);
     expect(useSettingsStore.getState().saving).toBe(false);
+  });
+
+  it("applies the UI zoom to the document", async () => {
+    backend.saveSettings.mockImplementation(async (settings) => settings);
+
+    await useSettingsStore.getState().update({ uiZoom: 150 });
+
+    expect(document.documentElement.style.getPropertyValue("--ui-zoom")).toBe("1.5");
+    expect(document.documentElement.dataset.uiScale).toBe("large");
+
+    document.documentElement.style.removeProperty("--ui-zoom");
+    delete document.documentElement.dataset.uiScale;
   });
 
   it("skips persistence when a patch changes nothing", async () => {

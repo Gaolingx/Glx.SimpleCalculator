@@ -4,7 +4,10 @@ import {
   DEFAULT_SETTINGS,
   HISTORY_LIMIT_MAX,
   HISTORY_LIMIT_MIN,
+  UI_ZOOM_MAX,
+  UI_ZOOM_MIN,
   isValidHistoryLimit,
+  isValidUiZoom,
   mergeSettings,
   normalizeSettings,
   settingsEqual,
@@ -27,6 +30,7 @@ describe("normalizeSettings", () => {
       radix: "hexadecimal",
       historyEnabled: false,
       historyLimit: 800,
+      uiZoom: 150,
     });
     expect(settings).toEqual({
       theme: "dark",
@@ -37,6 +41,7 @@ describe("normalizeSettings", () => {
       radix: "hexadecimal",
       historyEnabled: false,
       historyLimit: 800,
+      uiZoom: 150,
     });
   });
 
@@ -63,6 +68,15 @@ describe("normalizeSettings", () => {
       DEFAULT_SETTINGS.historyLimit,
     );
   });
+
+  it("clamps the UI zoom into the documented range", () => {
+    expect(normalizeSettings({ uiZoom: 10 }).uiZoom).toBe(UI_ZOOM_MIN);
+    expect(normalizeSettings({ uiZoom: 999 }).uiZoom).toBe(UI_ZOOM_MAX);
+    expect(normalizeSettings({ uiZoom: 137.6 }).uiZoom).toBe(138);
+    expect(normalizeSettings({ uiZoom: "big" }).uiZoom).toBe(
+      DEFAULT_SETTINGS.uiZoom,
+    );
+  });
 });
 
 describe("settings helpers", () => {
@@ -85,5 +99,14 @@ describe("settings helpers", () => {
     expect(isValidHistoryLimit(HISTORY_LIMIT_MAX)).toBe(true);
     expect(isValidHistoryLimit(HISTORY_LIMIT_MIN - 1)).toBe(false);
     expect(isValidHistoryLimit(555.5)).toBe(false);
+  });
+
+  it("validates UI zoom percentages", () => {
+    expect(isValidUiZoom(UI_ZOOM_MIN)).toBe(true);
+    expect(isValidUiZoom(UI_ZOOM_MAX)).toBe(true);
+    expect(isValidUiZoom(137)).toBe(true);
+    expect(isValidUiZoom(UI_ZOOM_MIN - 1)).toBe(false);
+    expect(isValidUiZoom(UI_ZOOM_MAX + 1)).toBe(false);
+    expect(isValidUiZoom(150.5)).toBe(false);
   });
 });

@@ -18,6 +18,8 @@ const SETTINGS_FILE: &str = "settings.json";
 const SETTINGS_KEY: &str = "settings";
 const HISTORY_LIMIT_MIN: u32 = 100;
 const HISTORY_LIMIT_MAX: u32 = 1_000;
+const UI_ZOOM_MIN: u32 = 50;
+const UI_ZOOM_MAX: u32 = 250;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
@@ -48,6 +50,8 @@ pub struct AppSettings {
     pub radix: Radix,
     pub history_enabled: bool,
     pub history_limit: u32,
+    /// Whole-UI zoom percentage; 100 is neutral.
+    pub ui_zoom: u32,
 }
 
 impl Default for AppSettings {
@@ -61,6 +65,7 @@ impl Default for AppSettings {
             radix: Radix::Decimal,
             history_enabled: true,
             history_limit: 500,
+            ui_zoom: 100,
         }
     }
 }
@@ -72,6 +77,7 @@ impl AppSettings {
         self.history_limit = self
             .history_limit
             .clamp(HISTORY_LIMIT_MIN, HISTORY_LIMIT_MAX);
+        self.ui_zoom = self.ui_zoom.clamp(UI_ZOOM_MIN, UI_ZOOM_MAX);
         self
     }
 }
@@ -181,6 +187,7 @@ mod tests {
         assert_eq!(settings.radix, Radix::Decimal);
         assert!(settings.history_enabled);
         assert_eq!(settings.history_limit, 500);
+        assert_eq!(settings.ui_zoom, 100);
     }
 
     #[test]
@@ -193,6 +200,7 @@ mod tests {
         assert_eq!(value["radix"], "decimal");
         assert_eq!(value["historyEnabled"], true);
         assert_eq!(value["historyLimit"], 500);
+        assert_eq!(value["uiZoom"], 100);
     }
 
     #[test]
@@ -203,6 +211,7 @@ mod tests {
         assert_eq!(settings.history_limit, 900);
         assert_eq!(settings.language, AppLanguage::ZhCn);
         assert_eq!(settings.radix, Radix::Decimal);
+        assert_eq!(settings.ui_zoom, 100);
     }
 
     #[test]
@@ -219,6 +228,22 @@ mod tests {
         .sanitized();
         assert_eq!(low.history_limit, HISTORY_LIMIT_MIN);
         assert_eq!(high.history_limit, HISTORY_LIMIT_MAX);
+    }
+
+    #[test]
+    fn ui_zoom_is_clamped() {
+        let low = AppSettings {
+            ui_zoom: 1,
+            ..AppSettings::default()
+        }
+        .sanitized();
+        let high = AppSettings {
+            ui_zoom: 9_999,
+            ..AppSettings::default()
+        }
+        .sanitized();
+        assert_eq!(low.ui_zoom, UI_ZOOM_MIN);
+        assert_eq!(high.ui_zoom, UI_ZOOM_MAX);
     }
 
     #[test]

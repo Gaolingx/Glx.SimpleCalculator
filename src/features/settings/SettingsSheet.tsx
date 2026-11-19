@@ -10,9 +10,10 @@ import {
   useToast,
   type SegmentedOption,
 } from "../../components/ui";
-import { isValidHistoryLimit } from "../../lib";
+import { applyUiZoom, isValidHistoryLimit } from "../../lib";
 import { toIpcError, type ErrorCode } from "../../lib/ipc";
 import type { AngleUnit, Radix, WordSize } from "../../lib/settings";
+import { UI_ZOOM_MAX, UI_ZOOM_MIN, UI_ZOOM_STEP, isValidUiZoom } from "../../lib/settings";
 import type { ThemeSetting } from "../../lib/theme";
 import type { AppLanguage } from "../../i18n";
 import { useSettingsStore } from "../../stores/settings";
@@ -24,6 +25,8 @@ const LANGUAGE_VALUES: readonly AppLanguage[] = ["zh-CN", "en-US"];
 const ANGLE_VALUES: readonly AngleUnit[] = ["deg", "rad", "grad"];
 const WORD_SIZE_VALUES: readonly WordSize[] = ["qword", "dword", "word", "byte"];
 const RADIX_VALUES: readonly Radix[] = ["hexadecimal", "decimal", "octal", "binary"];
+const ZOOM_HINT_ID = "settings-zoom-hint";
+const ZOOM_ERROR_ID = "settings-zoom-error";
 
 export function SettingsSheet() {
   const { t } = useTranslation();
@@ -40,6 +43,12 @@ export function SettingsSheet() {
   const [limitDraft, setLimitDraft] = useState<string | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
   const limitValue = limitDraft ?? String(settings.historyLimit);
+
+  const [zoomDraft, setZoomDraft] = useState<string | null>(null);
+  const [zoomError, setZoomError] = useState<string | null>(null);
+  const [zoomPreview, setZoomPreview] = useState<number | null>(null);
+  const zoomValue = zoomPreview ?? settings.uiZoom;
+  const zoomText = zoomDraft ?? String(zoomValue);
 
   const notifyError = (cause: unknown) => {
     const code: ErrorCode = toIpcError(cause).code;
@@ -62,7 +71,42 @@ export function SettingsSheet() {
     change({ historyLimit: value });
   };
 
+  const previewZoom = (value: number) => {
+    setZoomPreview(value);
+    setZoomDraft(null);
+    setZoomError(null);
+    applyUiZoom(value);
+  };
+
+  const commitZoom = () => {
+    if (zoomPreview === null) {
+      return;
+    }
+    const value = zoomPreview;
+    setZoomPreview(null);
+    change({ uiZoom: value });
+  };
+
+  const commitZoomText = () => {
+    if (zoomDraft === null) {
+      return;
+    }
+    const text = zoomDraft.trim();
+    const value = Number(text);
+    if (text === "" || !isValidUiZoom(value)) {
+      setZoomError(t("settings:zoomInvalid"));
+      return;
+    }
+    setZoomError(null);
+    setZoomDraft(null);
+    setZoomPreview(null);
+    change({ uiZoom: value });
+  };
+
   const handleReset = () => {
+    setZoomDraft(null);
+    setZoomError(null);
+    setZoomPreview(null);
     void reset()
       .then(() => showToast(t("settings:resetDone"), { variant: "success" }))
       .catch(notifyError);
@@ -122,6 +166,61 @@ export function SettingsSheet() {
               ariaLabel={t("language.label")}
               disabled={saving}
             />
+          </div>
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>{t("settings:zoom")}</span>
+            <div className={styles.zoomRow}>
+              <input
+                type="range"
+                className={styles.zoomSlider}
+                min={UI_ZOOM_MIN}
+                max={UI_ZOOM_MAX}
+                step={UI_ZOOM_STEP}
+                value={zoomValue}
+                aria-label={t("settings:zoom")}
+                aria-valuetext={`${zoomValue}%`}
+                disabled={saving}
+                onChange={(event) => previewZoom(Number(event.target.value))}
+                onPointerUp={commitZoom}
+                onPointerCancel={commitZoom}
+                onKeyUp={commitZoom}
+                onBlur={commitZoom}
+              />
+              <span className={styles.zoomEntry}>
+                <input
+                  type="text"
+                  className={styles.zoomInput}
+                  value={zoomText}
+                  aria-label={t("settings:zoomCustom")}
+                  aria-invalid={zoomError ? true : undefined}
+                  aria-describedby={zoomError ? ZOOM_ERROR_ID : ZOOM_HINT_ID}
+                  inputMode="numeric"
+                  maxLength={3}
+                  disabled={saving}
+                  onChange={(event) => {
+                    setZoomDraft(event.target.value);
+                    setZoomError(null);
+                  }}
+                  onBlur={commitZoomText}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      commitZoomText();
+                    }
+                  }}
+                />
+                <span aria-hidden="true">%</span>
+              </span>
+            </div>
+            {zoomError ? (
+              <span id={ZOOM_ERROR_ID} className={styles.zoomError} role="alert">
+                {zoomError}
+              </span>
+            ) : (
+              <span id={ZOOM_HINT_ID} className={styles.zoomHint}>
+                {t("settings:zoomHint")}
+              </span>
+            )}
           </div>
         </section>
 

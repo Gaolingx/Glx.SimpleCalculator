@@ -12,9 +12,14 @@ export {
   DEFAULT_SETTINGS,
   HISTORY_LIMIT_MAX,
   HISTORY_LIMIT_MIN,
+  UI_ZOOM_MAX,
+  UI_ZOOM_MIN,
+  UI_ZOOM_STEP,
   isValidHistoryLimit,
+  isValidUiZoom,
   mergeSettings,
   normalizeSettings,
+  normalizeUiZoom,
   settingsEqual,
 } from "./settings";
 export type { AngleUnit, AppSettings, Radix, WordSize } from "./settings";
@@ -56,6 +61,7 @@ export {
   TEXT_SCALE_MAX,
   TEXT_SCALE_MIN,
   applyUiScale,
+  applyUiZoom,
   currentUiScale,
   installUiScaleSync,
   normalizeTextScale,

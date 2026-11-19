@@ -29,6 +29,63 @@
   font-weight: var(--font-weight-medium);
 }
 
+.zoomRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.zoomSlider {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--color-primary);
+}
+
+.zoomEntry {
+  display: inline-flex;
+  flex: none;
+  align-items: baseline;
+  color: var(--color-text-muted);
+  font-size: var(--text-body);
+}
+
+.zoomInput {
+  width: 3ch;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.zoomInput:focus-visible {
+  box-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.zoomInput:disabled {
+  opacity: 0.6;
+}
+
+.zoomHint,
+.zoomError {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+
+.zoomHint {
+  color: var(--color-text-muted);
+}
+
+.zoomError {
+  color: var(--color-danger);
+}
+
 .error {
   color: var(--color-danger);
   font-size: var(--text-label);

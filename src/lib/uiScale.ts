@@ -1,4 +1,5 @@
 import { fetchUiScale } from "./ipc";
+import { normalizeUiZoom } from "./settings";
 
 /**
  * The compact 440px layout reflows at 120% and caps at 150% so the 6-column
@@ -15,15 +16,39 @@ export function normalizeTextScale(value: unknown): number {
   );
 }
 
+function readStyleNumber(target: HTMLElement, property: string): number {
+  const parsed = Number.parseFloat(target.style.getPropertyValue(property));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+/** The reflow marker follows the product of OS text size and user zoom. */
+function applyScaleMarker(target: HTMLElement): void {
+  const effective =
+    readStyleNumber(target, "--ui-scale") * readStyleNumber(target, "--ui-zoom");
+  target.dataset.uiScale = effective >= LARGE_SCALE_THRESHOLD ? "large" : "normal";
+}
+
 export function applyUiScale(value: unknown, root?: HTMLElement): number {
   const scale = normalizeTextScale(value);
   const target =
     root ?? (typeof document === "undefined" ? undefined : document.documentElement);
   if (target) {
     target.style.setProperty("--ui-scale", String(scale));
-    target.dataset.uiScale = scale >= LARGE_SCALE_THRESHOLD ? "large" : "normal";
+    applyScaleMarker(target);
   }
   return scale;
+}
+
+/** Applies the user's zoom percentage (50–250) on top of the OS text size. */
+export function applyUiZoom(value: unknown, root?: HTMLElement): number {
+  const zoom = normalizeUiZoom(value) / 100;
+  const target =
+    root ?? (typeof document === "undefined" ? undefined : document.documentElement);
+  if (target) {
+    target.style.setProperty("--ui-zoom", String(zoom));
+    applyScaleMarker(target);
+  }
+  return zoom;
 }
 
 export function currentUiScale(): number {

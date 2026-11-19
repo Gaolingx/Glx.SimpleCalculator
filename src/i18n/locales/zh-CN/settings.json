@@ -1,6 +1,10 @@
 {
   "title": "设置",
   "appearance": "外观",
+  "zoom": "界面缩放",
+  "zoomCustom": "自定义百分比",
+  "zoomHint": "拖动滑块以 25% 步进调整，或输入 50 到 250 之间的百分比",
+  "zoomInvalid": "请输入 50 到 250 之间的整数",
   "general": "通用",
   "defaults": "计算默认值",
   "grouping": "数字分组",

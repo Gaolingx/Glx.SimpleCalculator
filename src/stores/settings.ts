@@ -20,6 +20,7 @@ import {
   type AppSettings,
 } from "../lib/settings";
 import { readStoredTheme, setTheme } from "../lib/theme";
+import { applyUiZoom } from "../lib/uiScale";
 
 interface SettingsState {
   settings: AppSettings;
@@ -38,6 +39,7 @@ function initialSettings(): AppSettings {
 
 async function applySideEffects(settings: AppSettings): Promise<void> {
   setTheme(settings.theme);
+  applyUiZoom(settings.uiZoom);
   await setLanguage(settings.language);
 }
 

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   TEXT_SCALE_MAX,
   applyUiScale,
+  applyUiZoom,
   installUiScaleSync,
   normalizeTextScale,
   syncUiScale,
@@ -11,6 +12,7 @@ import {
 
 afterEach(() => {
   document.documentElement.style.removeProperty("--ui-scale");
+  document.documentElement.style.removeProperty("--ui-zoom");
   delete document.documentElement.dataset.uiScale;
 });
 
@@ -30,6 +32,35 @@ describe("ui scale", () => {
 
     applyUiScale(1);
     expect(document.documentElement.dataset.uiScale).toBe("normal");
+  });
+
+  it("applies user zoom on top of the OS text scale", () => {
+    applyUiScale(1);
+    expect(applyUiZoom(150)).toBe(1.5);
+    expect(document.documentElement.style.getPropertyValue("--ui-zoom")).toBe("1.5");
+    expect(document.documentElement.dataset.uiScale).toBe("large");
+
+    applyUiZoom(137);
+    expect(document.documentElement.style.getPropertyValue("--ui-zoom")).toBe("1.37");
+
+    applyUiZoom(50);
+    expect(document.documentElement.dataset.uiScale).toBe("normal");
+
+    applyUiZoom(999);
+    expect(document.documentElement.style.getPropertyValue("--ui-zoom")).toBe("2.5");
+  });
+
+  it("marks the compact layout as large when text scale and zoom combine", () => {
+    applyUiScale(1);
+    applyUiZoom(100);
+    expect(document.documentElement.dataset.uiScale).toBe("normal");
+
+    applyUiScale(1.25);
+    expect(document.documentElement.dataset.uiScale).toBe("large");
+
+    applyUiScale(1);
+    applyUiZoom(125);
+    expect(document.documentElement.dataset.uiScale).toBe("large");
   });
 
   it("keeps the current scale when the bridge fails", async () => {

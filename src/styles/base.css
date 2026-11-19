@@ -11,8 +11,8 @@ body,
 }
 
 html {
-  /* Windows Text size (100–150% effective) scales every rem-based dimension. */
-  font-size: calc(16px * var(--ui-scale, 1));
+  /* Windows Text size and the in-app zoom both scale every rem-based dimension. */
+  font-size: calc(16px * var(--ui-scale, 1) * var(--ui-zoom, 1));
 }
 
 body {

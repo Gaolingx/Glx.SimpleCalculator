@@ -5,6 +5,7 @@ import App from "./App";
 import { initI18n } from "./i18n";
 import {
   applyTheme,
+  applyUiZoom,
   installUiScaleSync,
   readStoredTheme,
   syncUiScale,
@@ -22,6 +23,7 @@ const root = createRoot(container);
 
 async function bootstrap(): Promise<void> {
   applyTheme(readStoredTheme());
+  applyUiZoom(useSettingsStore.getState().settings.uiZoom);
   await initI18n();
   root.render(
     <StrictMode>

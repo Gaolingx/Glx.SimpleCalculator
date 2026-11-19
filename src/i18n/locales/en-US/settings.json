@@ -1,6 +1,10 @@
 {
   "title": "Settings",
   "appearance": "Appearance",
+  "zoom": "UI zoom",
+  "zoomCustom": "Custom percentage",
+  "zoomHint": "Drag the slider in 25% steps, or enter a percentage from 50 to 250",
+  "zoomInvalid": "Enter an integer between 50 and 250",
   "general": "General",
   "defaults": "Calculator defaults",
   "grouping": "Digit grouping",
