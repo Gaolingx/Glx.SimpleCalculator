@@ -2,14 +2,14 @@
 
 | 项 | 内容 |
 |---|---|
-| 文档版本 | v0.2（T18 完成，待 T19 发布收尾） |
+| 文档版本 | v0.3（T19 完成，v0.1.0 发布收尾完成） |
 | 编写日期 | 2026-11-19 |
 | 仓库 | `E:\GitHub\Glx.SimpleCalculator` |
 | 说明 | 需求中提到的 `E:\GitHub\fork\Glx.SimpleCalculator` 不存在，按实际仓库路径落盘 |
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | Tauri 2 + React 19 应用完成，7 个页面、Rust 内核与 NSIS/MSI 打包；逐任务记录见 §1.3 |
-| 当前进度 | **T18 完成**（2026-11-19）：合并回归 20/20、README 与已知问题完成；下一步 T19 发布收尾 |
+| 当前进度 | **T19 完成**（2026-11-19）：v0.1.0 发布说明、产物归档与工作区清理完成；T0–T19 全部 done |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -310,6 +310,21 @@ setx PATH "%PATH%;E:\node"
 - 门禁复跑：Rust 246 项、前端 196 项；fmt/clippy/typecheck/lint/check:i18n/build 全绿；JS 415.79 kB（gzip 128.78 kB）。
 - 文档：根 `README.md` 重写（功能、环境、开发、门禁、打包、架构、数据路径、QA 链接、已知问题）；新增 `docs/qa/2026-11-19/T18-QA-MATRIX.md`（矩阵、检查表、限制）；QA README 增补 T18 段。截图 5 张：`t18-light-zh-CN-basic.png`、`t18-dark-zh-CN-basic.png`、`t18-dark-en-US-basic.png`、`t18-light-en-US-basic.png`、`t18-light-zh-CN-worksheets-150.png`。
 - 说明：标题栏 `DEV` 徽标为设计稿元素，100–115% 文本大小可见、≥120% 隐藏；是否在发布版移除留待 T19 决定。`docs/qa/2026-11-19/` 累计 T3–T18 证据约 3.1 MB，高于 §12.2 的 2 MB 建议值（T18 新增约 0.21 MB）。
+
+**T19 实测记录（2026-11-19）**
+
+- 版本号核对：`package.json`、`src-tauri/tauri.conf.json`、workspace `Cargo.toml` 均为 `0.1.0`，无需改动；构建日志确认 `glx-calculator v0.1.0`。
+- 重建：`npm run tauri build` 2m59s 完成；前端 JS 415.79 kB（gzip 128.78 kB）、CSS 58.82 kB（gzip 9.03 kB）、字体 48.25 kB，与 T17/T18 一致。
+- 产物归档：`release/v0.1.0/`（`.gitignore` 排除，不入库）含 exe 6,814,720 B、NSIS 2,401,088 B、MSI en-US 3,252,224 B、MSI zh-CN 3,248,128 B 及 `SHA256SUMS.txt`；`sha256sum -c` 四文件全部 OK。
+  - 本次 exe 哈希 `f66732d5…21ee2cf3` 与 T17 记录 `eb15cdff…d3782fc` 不同，但大小一致、源码相同（a61fc58 仅文档），视为构建非确定性；归档与发布说明以本次为准。
+- 发布说明：新增 `docs/release/v0.1.0.md`（功能、里程碑、产物与校验和、安装/卸载、验证、已知问题、ECB 来源与合规、后续计划）；README 增加链接并更新版本段。
+- 决策：标题栏 `DEV` 徽标**保留**（设计稿元素，≥120% 文本大小自动隐藏），已写入发布说明与 README 已知问题。
+- 清理：`/target/`、`/release/` 均由 `.gitignore` 排除；工作区无临时脚本、截图或日志；QA 证据保持 T3–T18 既有归档。
+- 复盘：
+  - 顺利：任务级「实现—测试—文档—提交」闭环让 T18/T19 只剩文档与产物工作，无返工；汇率、打包等外部依赖均在早期 spike/任务中先行验证。
+  - 待改进：`docs/qa/2026-11-19/` 累计约 3.1 MB，超出 §12.2 的单里程碑 2 MB 建议，后续按里程碑只保留一套精选图。
+  - 依赖外部环境：MSI per-machine 安装、中文输入法、双屏混合 DPI 仍需在对应环境复验。
+  - 发布流程：本次跑通「重建 → 归档 → 校验和 → 发布说明」，后续版本可直接复用 §12.6。
 
 ### 1.4 参考截图 → 布局结论
 
@@ -834,7 +849,7 @@ src/i18n/locales/en-US/...（同构）
 | T16 | 打磨：DPI/无障碍/性能 | M9 | T5–T15 | DPI 矩阵、文本缩放、键盘全流程、reduced-motion、性能采样 | 冷启动/输入延迟/IPC p95 | done |
 | T17 | 打包 | M9 | T16 | 图标、NSIS/MSI、WebView2 策略、体积优化 | 安装/卸载/启动 | done |
 | T18 | QA 与文档 | M9 | T16,T17 | QA 矩阵记录、截图归档、README、已知问题 | 检查表全勾；截图可追溯 | done |
-| T19 | 发布与收尾 | M9 | T18 | 版本号、发布说明、产物归档、清理、复盘 | 产物清单核对；工作区干净 | pending |
+| T19 | 发布与收尾 | M9 | T18 | 版本号、发布说明、产物归档、清理、复盘 | 产物清单核对；工作区干净 | done |
 
 **冲突与遗漏检查（T 表自审）**
 
@@ -1000,7 +1015,7 @@ npm run typecheck && npm run test
 - [x] 图标（SVG/ico/png 多尺寸）、安装包（NSIS + MSI）、WebView2 bootstrapper 策略
 - [x] README、截图、已知问题（`README.md`、`docs/qa/2026-11-19/T18-QA-MATRIX.md`）
 - [x] QA 检查表逐项打勾（T18 合并回归 20/20）
-- [ ] 发布说明（`docs/release/v0.1.0.md`，T19）
+- [x] 发布说明（`docs/release/v0.1.0.md`，T19）
 
 **验收**
 - `npm run tauri build` 产物可安装、可卸载、启动正常

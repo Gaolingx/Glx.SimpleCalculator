@@ -149,4 +149,4 @@ DPI（`deviceScaleFactor`，basic 页）：
 
 ## 结论
 
-T18 合并回归 **20/20 PASS**，0 console error，无阻塞缺陷；T18 验收通过。T19 待办：版本号、发布说明、产物归档与工作区清理。
+T18 合并回归 **20/20 PASS**，0 console error，无阻塞缺陷；T18 验收通过。T19 已完成：发布说明见 [docs/release/v0.1.0.md](../../release/v0.1.0.md)，产物归档于 `release/v0.1.0/`（不入库）。
