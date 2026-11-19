@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T2 完成**（2026-11-19）：设计令牌/双主题、基础控件、本地 Inter、i18n 12×2 骨架与 `check:i18n`；下一步 T3 |
+| 当前进度 | **T3 完成**（2026-11-19）：无边框外壳/导航/7 页占位/设置持久化，Spike A/B 已验证；下一步 T4 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -109,9 +109,23 @@ setx PATH "%PATH%;E:\node"
 - 主题：`src/styles/tokens.css` 全量令牌 + 深浅两套值，`prefers-color-scheme` 作为首屏兜底；启动时 `src/lib/theme.ts` 依据 `localStorage["glx.theme"]` 在 React 渲染前写入 `<html data-theme>`，避免白闪。存储键暂由前端管理，T3 迁移到 Rust 设置。
 - i18n：12 个命名空间 × zh-CN/en-US，静态资源导入；语言键 `glx.language` 与 `<html lang>` 同步；`scripts/check-i18n.mjs` 校验文件清单、键集合、空值与 `{{placeholder}}`，已接入 `npm run check:i18n` 与 CI。
 - 控件：`SoftButton / SoftCard / SoftInput / SoftTooltip / SoftToast`（CSS Modules；覆盖 hover/active/focus-visible/disabled/loading/error，tooltip 400ms 延迟、toast 3s 自动关闭）。
-- 临时画廊页 `src/features/dev/GalleryPage.tsx` 用于 T2 视觉验收，T3 接入路由时移除。
+- 临时画廊页 `src/features/dev/GalleryPage.tsx` 用于 T2 视觉验收，已于 T3 移除。
 - 构建产物：JS 289.68 kB（gzip 91.86 kB）、CSS 14.12 kB（gzip 3.42 kB）、字体 48.25 kB；按 §8 的 gzip 预算（250 kB）通过。i18next 使 raw 体积高于 T1，门禁口径统一按 gzip。
 - 视觉检查：Edge headless 440 宽，light/dark × zh/en；tooltip 聚焦显示、toast 四态与关闭均正常，页面无未翻译的裸键。截图仅作过程验证，未入库。
+
+**T3 实测记录（2026-11-19）**
+
+- 窗口：`decorations:false`、`transparent:false`、`shadow:true`；默认 440×820、最小 380×640。实测 175% 缩放（DPI 168）下逻辑尺寸仍为 440×820。
+- 权限根因：`core:default` 只含窗口读取与 drag-region 的双击最大化（`allow-internal-toggle-maximize`），**不含**拖拽与窗口操作。已在 `capabilities/default.json` 增加 `allow-start-dragging`、`allow-minimize`、`allow-toggle-maximize`、`allow-close`；否则自绘按钮与拖拽会被静默拒绝。
+- Spike A（Win32 输入注入 + 窗口样式）：窗口具备 `WS_THICKFRAME / WS_MINIMIZEBOX / WS_MAXIMIZEBOX`，无分层透明；双击标题栏最大化/还原、标题栏拖拽移动、拖到屏幕顶部 Snap、右下角边缘缩放、自绘最小化/最大化/还原/关闭全部通过。
+- Spike B（DPI/特效）：系统为 Windows Server 2022（10.0.20348），Mica 不可用；窗口保持 opaque + 纯色主题，不启用 Acrylic。设备模拟 1.0 / 1.25 / 1.5 / 1.75 / 2.0 五档下 `scrollWidth/scrollHeight` 均未超出 440×820，无溢出；175% 实际渲染清晰。
+- 设置：Rust `settings_get/set/reset` 写入 `%APPDATA%\com.glx.calculator\settings.json`；重启后 dark/en-US 恢复成功；恢复默认写回 `system/zh-CN`。前端仅保留 `glx.theme`/`glx.language` 启动镜像。
+- 覆盖层：设置弹层（焦点陷阱、Esc、遮罩关闭）与历史抽屉可开合；`Ctrl+H` 打开历史。全局滚动条改为 8px 圆角自定义样式，无原生滚动条。
+- 路由：hash 路由 `#/basic…worksheets`，7 个占位页；设置/历史不占主导航主项。
+- 控制台：修复 favicon 404（内联 data SVG）后为 0 error/0 warning。
+- 测试：前端 31 项（含设置归一化、store 回滚、路由、UI store）；Rust 10 项（契约 5 + 设置 5）。
+- 构建：JS 321.04 kB（gzip 100.50 kB）、CSS 21.43 kB（gzip 4.57 kB）、字体 48.25 kB，按 §8 gzip 预算通过。
+- 截图归档：`docs/qa/2026-11-19/`（light/dark × zh/en + 设置弹层，5 张，共约 148 kB）。
 
 ### 1.4 参考截图 → 布局结论
 
@@ -351,7 +365,7 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 ### 3.9 安全基线
 
 - CSP：`default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost`（按 Tauri 2 实际要求调整）。
-- capabilities 最小化：`core:default`、`clipboard-manager`、`store`、`window-state`、`opener`；**不引入 shell / fs 全量权限**。
+- capabilities 最小化：`core:default`、`clipboard-manager`、`store`、`window-state`、`opener`；自绘标题栏额外需要 `core:window:allow-start-dragging / allow-minimize / allow-toggle-maximize / allow-close`（`core:default` 不含窗口写操作）；**不引入 shell / fs 全量权限**。
 - 不加载远程脚本/字体；Inter 字体本地打包（woff2）。
 - 粘贴输入先清洗再交给内核，长度上限（如 1,000 字符）防止构造超长表达式。
 
@@ -604,7 +618,7 @@ src/i18n/locales/en-US/...（同构）
 | T0 | 环境与模块边界冻结 | M0 | — | PATH 约定、根 `Cargo.toml` workspace、`crates/calc-core` 契约骨架（`error/view/mode/command`）、`.gitignore`、本文档 3.10/3.11 | `cargo test -p calc-core`；`cargo check --workspace` | done |
 | T1 | Tauri + React 脚手架 + CI | M0 | T0 | `src-tauri` 配置/插件/权限、Vite/TS/oxlint（见 1.3）、`package-lock.json`、`.github/workflows/ci.yml` | `npm install`；`npm run tauri dev`；CI 绿 | done |
 | T2 | 设计系统 + i18n + 主题 | M0 | T1 | `tokens.css`（双主题）、字体、`SoftButton/Card/Input/Tooltip/Toast`、i18n 初始化与 zh/en 骨架 | 两主题/两语言截图；`check:i18n` | done |
-| T3 | 窗口外壳 + 导航 + 设置 | M0 | T2 | `TitleBar`/`CaptionButtons`/`NavRail`/路由（7 页占位）、设置页与 store 读写、Spike A/B | 拖拽/缩放/关闭；重启保留设置；DPI 100/150 | pending |
+| T3 | 窗口外壳 + 导航 + 设置 | M0 | T2 | `TitleBar`/`CaptionButtons`/`NavRail`/路由（7 页占位）、设置页与 store 读写、Spike A/B | 拖拽/缩放/关闭；重启保留设置；DPI 100/150 | done |
 | T4 | 核心 v1：值/解析/基本引擎 | M1 | T0 | `value/parser/engine/ops::basic`、错误、记忆、≥60 单测 | `cargo test -p calc-core` | pending |
 | T5 | 标准模式 UI + 格式化 + 键盘 | M2 | T3,T4 | 标准页、`Display`、`Keypad`、`lib/format.ts`（分组）、键盘映射 | 手工用例表；Vitest 格式化 | pending |
 | T6 | 历史记录 | M2 | T4,T5 | 存储命令、历史抽屉、恢复/删除/清空/复制 | 重启保留；上限；两语言 | pending |
@@ -637,10 +651,10 @@ src/i18n/locales/en-US/...（同构）
 - [x] T0：根 `Cargo.toml` workspace（先含 `crates/calc-core`，T1 加入 `src-tauri`）+ 契约骨架 + `.gitignore`
 - [x] T1：初始化 Tauri 2 + React 19 + TS + Vite；插件与 capabilities 最小权限；CI
 - [x] T2：`tokens.css`（双主题）+ 基础控件 + 字体本地化 + i18n 骨架
-- [ ] T3：窗口 440×820、最小 380×640、`decorations:false`、`transparent:false`；`TitleBar` + `NavRail` + 路由占位（7 个主页面 + 2 个覆盖层，见 2.0）
-- [ ] T3：设置页与 store 读写（主题/语言/分组/角度制/字宽/进制/历史开关）
-- [ ] **Spike A（T3）**：无边框窗口拖拽/双击最大化/缩放/阴影/Snap；结论写回附录 B
-- [ ] **Spike B（T3）**：WebView2 在 100%–200% DPI 下渲染清晰度；Acrylic 可用性
+- [x] T3：窗口 440×820、最小 380×640、`decorations:false`、`transparent:false`；`TitleBar` + `NavRail` + 路由占位（7 个主页面 + 2 个覆盖层，见 2.0）
+- [x] T3：设置页与 store 读写（主题/语言/分组/角度制/字宽/进制/历史开关）
+- [x] **Spike A（T3）**：无边框窗口拖拽/双击最大化/缩放/阴影/Snap；结论写回附录 B
+- [x] **Spike B（T3）**：WebView2 在 100%–200% DPI 下渲染清晰度；Acrylic 可用性
 
 **验收**
 - `npm run tauri dev` 正常启动，无控制台报错
@@ -874,8 +888,8 @@ npm run check:i18n
 | # | 风险 | 概率/影响 | 缓解 |
 |---|---|---|---|
 | 1 | 未安装 Node，无法构建前端 | 高/高 | M0 第一步安装并验证；CI 同样固定版本 |
-| 2 | 无边框窗口在 Windows 上丢失拖拽/双击最大化/阴影/Snap | 中/高 | M0 Spike A；若失败，回退原生标题栏（保持内部 modern UI） |
-| 3 | Server 2022 无 Mica、Acrylic 不稳定 | 高/中 | 默认纯色 + 极低对比渐变；特效仅作可选 |
+| 2 | 无边框窗口在 Windows 上丢失拖拽/双击最大化/阴影/Snap | 中/高 | M0 Spike A 已验证通过（2026-11-19，含权限补齐）；原生标题栏回退方案保留 |
+| 3 | Server 2022 无 Mica、Acrylic 不稳定 | 高/中 | 默认纯色 + 极低对比渐变；Spike B 确认 Mica 不可用，Acrylic 不启用，特效仍为可选 |
 | 4 | 汇率接口被墙/离线 | 中/中 | 缓存 + 过期提示 + 重试；Rust 侧请求 |
 | 5 | 科学型 f64 精度与用户预期不符 | 中/中 | 明确显示位数策略；关键用例固化；需要时启用 Decimal 路径 |
 | 6 | 每次按键 IPC 造成卡顿 | 低/中 | 目标 p95 <15ms；M2 压测；必要时前端本地预览 + 防抖 |
@@ -1011,6 +1025,7 @@ rm -rf src-tauri/target/release/bundle
 | 14 | 3.10 / 7 | 模块职责、测试归属、清理归属分散 | 增补 3.10 边界、7.0 测试归属、第 12 节收尾 |
 | 15 | 1.3 / 6.0 T1 | `typescript-eslint` 不支持 TS 7，原定 ESLint 无法落地 | 改用 `oxlint@1.94`；1.3 记录偏差与回溯条件 |
 | 16 | 4.2 | light 文字 muted `#64748b` 在 12px 下对比度仅 4.34:1 | 改为 `#5c6b80`（4.95:1）；dark 保持 `#94a3b8`（约 7.3:1） |
+| 17 | 3.9 / T3 | capabilities 仅列插件权限，未说明自绘标题栏需要窗口写权限 | T3 实测补 `core:window:allow-start-dragging/minimize/toggle-maximize/close`；`core:default` 仅含读取与 drag-region 双击最大化 |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 
@@ -1040,6 +1055,6 @@ npm: react 19.3.1, vite 8.3.8, typescript 7.0.2, zustand 5.1.0,
 
 | Spike | 问题 | 结论 | 日期 |
 |---|---|---|---|
-| A | `decorations:false` 下拖拽 / 双击最大化 / 缩放 / 阴影 / Snap | 待验证 | — |
-| B | Server 2022 下 Acrylic/透明与 DPI 清晰度 | 待验证 | — |
-| C | IPC 单次命令延迟（20 次按键均值/p95） | 待验证 | — |
+| A | `decorations:false` 下拖拽 / 双击最大化 / 缩放 / 阴影 / Snap | **通过**。窗口具备 `WS_THICKFRAME/MINBOX/MAXBOX`，双击最大化/还原、标题栏拖拽、顶部 Snap、边缘缩放、自绘按钮均正常；需在 capabilities 补 `start-dragging/minimize/toggle-maximize/close`，`core:default` 不含窗口写操作。 | 2026-11-19 |
+| B | Server 2022 下 Acrylic/透明与 DPI 清晰度 | **通过（纯色降级）**。Build 20348 无 Mica；窗口 opaque，不启用 Acrylic。设备模拟 100%/125%/150%/175%/200% 布局无溢出，175% 实机渲染清晰。 | 2026-11-19 |
+| C | IPC 单次命令延迟（20 次按键均值/p95） | 待验证（T4 实现 `calc_command` 后测量） | — |

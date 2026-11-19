@@ -1,0 +1,34 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 16rem;
+  padding: var(--spacing-24) 0;
+  text-align: center;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 0.5rem;
+  border-radius: 1.125rem;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+.text {
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-medium);
+}
+
+.hint {
+  max-width: 14rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}

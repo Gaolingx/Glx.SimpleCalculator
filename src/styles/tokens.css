@@ -70,6 +70,7 @@
   --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 
   --z-tooltip: 40;
+  --z-dialog: 50;
   --z-toast: 60;
 }
 

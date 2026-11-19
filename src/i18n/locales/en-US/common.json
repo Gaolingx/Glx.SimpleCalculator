@@ -1,5 +1,7 @@
 {
   "appName": "Glx Calculator",
+  "navigation": "Main navigation",
+  "comingSoon": "This module will be available in a later release.",
   "ok": "OK",
   "cancel": "Cancel",
   "close": "Close",
@@ -12,6 +14,11 @@
   "dismiss": "Dismiss notification",
   "on": "On",
   "off": "Off",
+  "window": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore"
+  },
   "theme": {
     "label": "Theme",
     "light": "Light",
@@ -22,17 +29,5 @@
     "label": "Language",
     "zh-CN": "简体中文",
     "en-US": "English"
-  },
-  "gallery": {
-    "title": "Design system preview",
-    "typography": "Typography & palette",
-    "buttons": "Buttons",
-    "inputs": "Inputs",
-    "overlays": "Overlays",
-    "tooltipHint": "Hover or focus to show the tooltip",
-    "toastInfo": "Action completed",
-    "toastSuccess": "Saved",
-    "toastWarning": "Please check your input",
-    "toastDanger": "Operation failed"
   }
 }

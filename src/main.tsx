@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { initI18n } from "./i18n";
 import { applyTheme, readStoredTheme } from "./lib";
+import { useSettingsStore } from "./stores/settings";
 import "./styles/fonts.css";
 import "./styles/tokens.css";
 import "./styles/base.css";
@@ -22,6 +23,7 @@ async function bootstrap(): Promise<void> {
       <App />
     </StrictMode>,
   );
+  void useSettingsStore.getState().hydrate();
 }
 
 void bootstrap().catch((error: unknown) => {

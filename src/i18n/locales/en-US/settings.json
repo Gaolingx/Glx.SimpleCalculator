@@ -2,9 +2,34 @@
   "title": "Settings",
   "appearance": "Appearance",
   "general": "General",
+  "defaults": "Calculator defaults",
   "grouping": "Digit grouping",
   "groupingHint": "Show large numbers as 1,000",
+  "historyEnabled": "Save history",
+  "historyEnabledHint": "Keep completed calculations across restarts",
   "historyLimit": "History limit",
   "historyLimitHint": "100 to 1000 entries",
-  "resetDefaults": "Restore default settings"
+  "historyLimitInvalid": "Enter an integer between 100 and 1000",
+  "angleUnit": "Angle unit",
+  "wordSize": "Word size",
+  "radix": "Radix",
+  "resetDefaults": "Restore default settings",
+  "resetDone": "Default settings restored",
+  "angle": {
+    "deg": "DEG",
+    "rad": "RAD",
+    "grad": "GRAD"
+  },
+  "wordSizeOption": {
+    "qword": "64-bit",
+    "dword": "32-bit",
+    "word": "16-bit",
+    "byte": "8-bit"
+  },
+  "radixOption": {
+    "hexadecimal": "HEX",
+    "decimal": "DEC",
+    "octal": "OCT",
+    "binary": "BIN"
+  }
 }

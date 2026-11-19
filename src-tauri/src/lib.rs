@@ -5,6 +5,10 @@
 //! - arithmetic is delegated to `calc-core`;
 //! - IPC contracts mirror `calc-core::{view,error,command}`.
 
+mod settings;
+
+use tauri::Manager;
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -12,6 +16,16 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_log::Builder::default().build())
+        .setup(|app| {
+            let loaded = settings::load(app.handle());
+            app.manage(settings::SettingsState::new(loaded));
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            settings::settings_get,
+            settings::settings_set,
+            settings::settings_reset,
+        ])
         .run(tauri::generate_context!())
         .expect("failed to launch Glx Calculator");
 }

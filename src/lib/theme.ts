@@ -51,9 +51,11 @@ function systemPrefersDark(): boolean {
 
 export function applyTheme(setting: ThemeSetting): ResolvedTheme {
   const resolved = resolveTheme(setting, systemPrefersDark());
-  const root = document.documentElement;
-  root.dataset.theme = resolved;
-  root.style.colorScheme = resolved;
+  if (typeof document !== "undefined") {
+    const root = document.documentElement;
+    root.dataset.theme = resolved;
+    root.style.colorScheme = resolved;
+  }
   return resolved;
 }
 

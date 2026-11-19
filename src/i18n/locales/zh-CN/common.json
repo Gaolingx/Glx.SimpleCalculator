@@ -1,5 +1,7 @@
 {
   "appName": "Glx Calculator",
+  "navigation": "主导航",
+  "comingSoon": "该模块将在后续版本中提供。",
   "ok": "确定",
   "cancel": "取消",
   "close": "关闭",
@@ -12,6 +14,11 @@
   "dismiss": "关闭提示",
   "on": "开",
   "off": "关",
+  "window": {
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "还原"
+  },
   "theme": {
     "label": "主题",
     "light": "浅色",
@@ -22,17 +29,5 @@
     "label": "语言",
     "zh-CN": "简体中文",
     "en-US": "English"
-  },
-  "gallery": {
-    "title": "设计系统预览",
-    "typography": "字体与色板",
-    "buttons": "按钮",
-    "inputs": "输入框",
-    "overlays": "浮层",
-    "tooltipHint": "悬停或聚焦查看提示",
-    "toastInfo": "操作已完成",
-    "toastSuccess": "已保存",
-    "toastWarning": "请注意输入内容",
-    "toastDanger": "操作失败"
   }
 }
