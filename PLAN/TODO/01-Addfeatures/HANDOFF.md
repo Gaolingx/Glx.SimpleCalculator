@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T16 完成**（2026-11-19）：OS 文本缩放/无障碍/性能打磨完成；下一步 T17 打包 |
+| 当前进度 | **T17 完成**（2026-11-19）：品牌图标、NSIS/MSI 与 WebView2 策略、体积优化完成；下一步 T18 QA 与文档 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -82,7 +82,7 @@ setx PATH "%PATH%;E:\node"
 | `tauri-plugin-clipboard-manager` | 2.5.0 | 剪贴板 |
 | `tauri-plugin-store` | 2.5.1 | 设置 / 历史持久化 |
 | `tauri-plugin-window-state` | 2.5.0 | 窗口尺寸记忆 |
-| `tauri-plugin-opener` | 2.7.3 | 打开外部链接 |
+| `tauri-plugin-opener` | 2.7.3 | 打开外部链接（T17 移除：全仓未使用） |
 | `tauri-plugin-log` | 2.10.2 | 诊断日志 |
 | `react` | 19.3.1 | UI |
 | `vite` | 8.3.8 | 构建 |
@@ -96,10 +96,10 @@ setx PATH "%PATH%;E:\node"
 
 **T1 实测记录（2026-11-19）**
 
-- 实际解析版本：`tauri@2.11.6`、`@tauri-apps/api@2.11.1`、`@tauri-apps/cli@2.11.5`、`react@19.3.1`、`vite@8.3.8`、`typescript@7.0.2`、`vitest@5.1.1`；五个插件（clipboard-manager / log / opener / store / window-state）均落在 2.x 稳定线。
+- 实际解析版本：`tauri@2.11.6`、`@tauri-apps/api@2.11.1`、`@tauri-apps/cli@2.11.5`、`react@19.3.1`、`vite@8.3.8`、`typescript@7.0.2`、`vitest@5.1.1`；五个插件（clipboard-manager / log / opener / store / window-state）均落在 2.x 稳定线（opener 于 T17 移除，实际保留四个）。
 - **Tauri 版本对齐**：`tauri dev` 会校验 Rust crate 与 `@tauri-apps/api` 的 major/minor 是否一致；crates.io 当前 2.x 最新为 `2.11.6`，而 npm 侧已到 2.12.x。因此 npm 两个包用 `~2.11.x` 固定（而非 `^2.12`），避免 “Found version mismatched Tauri packages”。crates.io 发布 2.12 后可同步升级。
 - **ESLint 偏差**：`typescript-eslint@8.73` 的 peer 范围仍为 `typescript >=4.8.4 <6.1.0`，与最新 `typescript@7.0.2` 冲突。因此 lint 门禁改用 `oxlint@1.94`（原生 TS 解析，含 react/typescript 插件），脚本名保持 `npm run lint`；待 typescript-eslint 支持 TS 7 后可直接替换，不影响其他门禁。
-- 图标：`src-tauri/icons/app-icon.png` 为程序化生成的占位源图（紫底白色等号），经 `tauri icon` 展开为多尺寸 PNG/ICO/ICNS；`android/`、`ios/` 产物已删除（本迭代不做移动端，见 2.2）。
+- 图标：`src-tauri/icons/app-icon.png` 为程序化生成的占位源图（紫底白色等号），经 `tauri icon` 展开为多尺寸 PNG/ICO/ICNS；`android/`、`ios/` 产物已删除（本迭代不做移动端，见 2.2）。（T17 已替换为 `app-icon.svg` 品牌图标并重新生成，见 §8。）
 - 本地验证：`npm run typecheck` / `npm run lint` / `npm run test` / `npm run build`、`cargo fmt --check` / `cargo clippy -D warnings` / `cargo test --workspace` 全部通过；前端产物 JS 219.7 kB（gzip 68.7 kB），低于 250 kB 预算。
 
 **T2 实测记录（2026-11-19）**
@@ -286,6 +286,19 @@ setx PATH "%PATH%;E:\node"
 - 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -- -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 415.79 kB（gzip 128.78 kB）、CSS 58.82 kB（gzip 9.03 kB），仍在 250 kB gzip 预算内。
 - QA（Tauri dev + WebView2 CDP，440×820）：系统缩放 100/125/150/175/200% 下 `documentElement` 恒为 440/440、820/820，`main` 376/776，无横向溢出与按钮越界；文本 100/125/150% × 7 页全部无横向溢出、无截断标签；en-US 150% 的 `Mortgage/Fuel/Lease` 与 `Difference/Add or subtract` 同样完整；150% 下日期弹层 416px、设置弹层 368px 均在视口内；Tab→「跳到主要内容」→ main 聚焦、F1 打开并 Esc 关闭说明、Ctrl+H 打开历史均通过；0 console error。当前机器未设置 TextScaleFactor（命令返回 1.0），125/150% 通过同一 CSS 变量路径验证，未修改系统设置。
 - 截图：`docs/qa/2026-11-19/t16-light-zh-CN-shortcuts.png`、`t16-light-zh-CN-basic-100.png`、`t16-light-zh-CN-scientific-150.png`、`t16-light-zh-CN-programmer-150.png`、`t16-dark-zh-CN-basic-150.png`、`t16-light-zh-CN-datepicker-150.png`、`t16-light-en-US-shortcuts-150.png`、`t16-light-en-US-scientific-150.png`、`t16-dark-en-US-worksheets-150.png`。
+
+
+**T17 实测记录（2026-11-19）**
+
+- 图标：新增 `src-tauri/icons/app-icon.svg`（靛蓝渐变圆角方块 + 白色等号，6.25% 透明边距），用 `npx tauri icon src-tauri/icons/app-icon.svg` 生成 32–512px PNG、多尺寸 ICO/ICNS 及 Square/StoreLogo；`app-icon.png` 更新为 1024px 渲染源；`android/`、`ios/` 再次删除。窗口、exe 与安装包统一使用 `icon.ico`。
+- 打包配置：`bundle` 补 `publisher=Glx`、`copyright`、`category=Utility`、中英文描述；NSIS `installMode=currentUser`、`languages=[English,SimpChinese]`、显示语言选择器；WiX 生成 `en-US`/`zh-CN` 两个 MSI（模板固定 `perMachine`，需管理员）；WebView2 采用 `downloadBootstrapper` + `silent`。
+- 体积：release profile 采用 `opt-level="s"`、`lto="thin"`、`codegen-units=1`、`strip=true`、`panic="abort"`；移除全仓 0 引用的 `tauri-plugin-opener`（同时删除依赖、插件注册与 capability）。同档位（仅 opt/lto/strip）exe 为 10.99 MB，加入 `panic=abort` 并移除 opener 后降至 **6.81 MB**，满足 <10 MB；NSIS 2.40 MB；MSI en-US 3.25 MB / zh-CN 3.25 MB。
+- 前端产物体积不变：JS 415.79 kB（gzip 128.78 kB）、CSS 58.82 kB（gzip 9.03 kB），低于 250 kB gzip 预算。
+- NSIS 冒烟（Windows Server 2022、非管理员）：`setup.exe /S` 退出码 0，安装至 `%LOCALAPPDATA%\Glx Calculator`，HKCU 卸载项显示 0.1.0；启动 `glx-calculator.exe` 后窗口标题 `Glx Calculator`，CDP 校验 `main=true`、43 个按钮、根字号 16px；关闭后 `uninstall.exe /S` 退出码 0，安装目录与卸载注册项均移除，无遗留进程。
+- MSI 冒烟：非管理员 `/qn` 安装返回 1625（系统策略禁用非管理员的 per-machine 安装），未写入 Program Files；改用 `msiexec /a` 管理安装解包成功（exit 0），载荷 exe 6,814,720 B 与 NSIS 安装一致，直接启动窗口与 CDP 正常。per-machine 安装/卸载需在管理员会话复验，已记入 QA 说明。
+- 冷启动（release exe，进程启动 → `main` 可交互）：1.53 s / 0.85 s / 0.93 s；首次略高于 1.5 s 目标，含 50 ms 轮询与 CDP 握手开销，T16 同口径为 1.45 s，后续稳定在 0.9 s 左右。
+- 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -- -D warnings` / `cargo test --workspace`（246 项）；`npm run typecheck` / `lint` / `test`（196 项）/ `check:i18n` / `build` 全绿。
+- 文档/QA：产物大小与 SHA-256、安装/卸载步骤与 MSI 限制记录于 `docs/qa/2026-11-19/README.md`。签名与自动更新不在本迭代（无证书，SmartScreen 可能提示）。
 
 
 ### 1.4 参考截图 → 布局结论
@@ -538,7 +551,7 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 ### 3.9 安全基线
 
 - CSP：`default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost`（按 Tauri 2 实际要求调整）。
-- capabilities 最小化：`core:default`、`clipboard-manager`、`store`、`window-state`、`opener`；自绘标题栏额外需要 `core:window:allow-start-dragging / allow-minimize / allow-toggle-maximize / allow-close`（`core:default` 不含窗口写操作）；**不引入 shell / fs 全量权限**。
+- capabilities 最小化：`core:default`、`clipboard-manager`、`store`、`window-state`；自绘标题栏额外需要 `core:window:allow-start-dragging / allow-minimize / allow-toggle-maximize / allow-close`（`core:default` 不含窗口写操作）；**不引入 shell / fs 全量权限**。
 - 不加载远程脚本/字体；Inter 字体本地打包（woff2）。
 - 粘贴输入先清洗再交给内核，长度上限（如 1,000 字符）防止构造超长表达式。
 
@@ -618,7 +631,7 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 | 核心 | `crates/calc-core/src/units/*`、`date.rs`、`worksheet/*` | 新建 | T12–T15 |
 | 核心测试 | `crates/calc-core/tests/*`、`tests/golden/*.json` | 新建 | 随 T4 起 |
 | Tauri | `src-tauri/Cargo.toml`、`tauri.conf.json`、`build.rs`、`capabilities/default.json` | 新建 | T1 |
-| Tauri | `src-tauri/icons/*`（占位源图 + `tauri icon` 生成） | 新建 | T1、T17 |
+| Tauri | `src-tauri/icons/app-icon.svg`（品牌源图）+ `tauri icon` 生成多尺寸 | 新建/修改 | T1、T17 |
 | Tauri | `src-tauri/src/{main,lib}.rs`、`commands/*`、`state.rs`、`storage.rs`、`currency.rs` | 新建 | T1、T7、T13 |
 | 前端 | `package.json`、`package-lock.json`、`vite.config.ts`、`tsconfig.json`、`index.html` | 新建 | T1 |
 | 前端 | `src/styles/*`、`src/components/ui/*`、`layout/*` | 新建 | T2–T3 |
@@ -809,7 +822,7 @@ src/i18n/locales/en-US/...（同构）
 | T14 | 日期计算 | M7 | T3 | 日期差/加减、`DatePicker`、本地化格式 | 闰年/月末夹取单测 | done |
 | T15 | 工作表 | M8 | T3 | 注册表、抵押/油耗/租赁、通用表单与结果卡 | 黄金月供 ±0.01；字段级校验 | done |
 | T16 | 打磨：DPI/无障碍/性能 | M9 | T5–T15 | DPI 矩阵、文本缩放、键盘全流程、reduced-motion、性能采样 | 冷启动/输入延迟/IPC p95 | done |
-| T17 | 打包 | M9 | T16 | 图标、NSIS/MSI、WebView2 策略、体积优化 | 安装/卸载/启动 | pending |
+| T17 | 打包 | M9 | T16 | 图标、NSIS/MSI、WebView2 策略、体积优化 | 安装/卸载/启动 | done |
 | T18 | QA 与文档 | M9 | T16,T17 | QA 矩阵记录、截图归档、README、已知问题 | 检查表全勾；截图可追溯 | pending |
 | T19 | 发布与收尾 | M9 | T18 | 版本号、发布说明、产物归档、清理、复盘 | 产物清单核对；工作区干净 | pending |
 
@@ -974,7 +987,7 @@ npm run typecheck && npm run test
 - [x] Windows 文本大小 100/125/150%（根字号 + 键盘重排 + 弹层视口约束）
 - [x] 可访问性：键盘全流程、焦点顺序、跳转链接、F1 说明、aria、减少动效、强制色
 - [x] 性能：输入到绘制 <50ms、IPC p95 <15ms；冷启动见 T16 记录
-- [ ] 图标（SVG/ico/png 多尺寸）、安装包（NSIS + MSI）、WebView2 bootstrapper 策略
+- [x] 图标（SVG/ico/png 多尺寸）、安装包（NSIS + MSI）、WebView2 bootstrapper 策略
 - [ ] 发布说明、README、截图、已知问题
 - [ ] QA 检查表逐项打勾
 
@@ -1051,11 +1064,11 @@ npm run check:i18n
 |---|---|
 | 标识符 | `com.glx.calculator`（待确认） |
 | 产品名 | `Glx Calculator`（窗口标题走 i18n） |
-| 图标 | 需提供源图；先用字母/算盘占位，`tauri icon` 生成多尺寸 |
-| 安装包 | NSIS（默认）+ MSI；按用户级安装 |
-| WebView2 | `downloadBootstrapper`（Win10/11 通常自带；Server 2022 需联网安装） |
-| 体积预算 | exe < 10 MB；前端 JS < 250 KB gzip（不含字体） |
-| 优化 | release：`lto="thin"`、`codegen-units=1`、`strip=true`；比较 `opt-level="s"` |
+| 图标 | `src-tauri/icons/app-icon.svg`（靛蓝渐变圆角 + 白色等号）为源图；`tauri icon` 生成 32–512px PNG 与多尺寸 ICO/ICNS、Square/Store；不保留移动端目录 |
+| 安装包 | NSIS（默认，`currentUser` 免提权，English/SimpChinese 语言选择器）+ MSI（WiX，`perMachine`，en-US/zh-CN 双包，需管理员） |
+| WebView2 | `downloadBootstrapper`（`silent`）：Win10/11 通常自带；Server 2022/离线机器需联网安装或预装 Evergreen Runtime |
+| 体积预算 | exe 实测 **6.81 MB**（<10 MB）；前端 JS 415.79 kB / gzip 128.78 kB（<250 kB gzip，不含字体） |
+| 优化 | release：`opt-level="s"`、`lto="thin"`、`codegen-units=1`、`strip=true`、`panic="abort"`；移除未使用的 `tauri-plugin-opener`。仅 opt/lto/strip 档 exe 10.99 MB → 最终 6.81 MB |
 | 签名 | 暂无证书，文档说明 SmartScreen 提示；后续接入 |
 | 自动更新 | 本迭代不做，保留版本号与 changelog 规范 |
 
@@ -1215,6 +1228,7 @@ rm -rf src-tauri/target/release/bundle
 | 26 | 3.10 / T14 | 日期差的方向、按月加减“先夹取还是后夹取”、复制格式未定义 | T14 明确：分量在较早→较晚区间计算且非负，`totalDays` 带符号、`totalWeeks` 截断；先按月夹取月末再加天/周；日期限 0001–9999，越界 `OVERFLOW`；复制日期用 ISO、结果区用本地化长格式、触发器用本地化数字短格式 |
 | 27 | 3.5 / 3.6 / T15 | 工作表三公式与金额口径、租赁税费/利率含义、字段校验归属未定义 | T15 明确：抵押用等额本息年金公式（`r=年利率/1200`、`n=年数×12`，零利率回退 `P/n`），总还款=四舍五入月供×期数、总利息=总还款−本金（负值归零）；油耗按 `L/100km` 计算总油耗与费用，并按精确加仑/英里定义给出 `mpg(US/UK)`；租赁 `moneyFactor=APR/2400`、税按税率乘月租、总成本=月租×月数、利息明细=月租中的租金部分×月数，且残值必须小于车价；字段边界由注册表声明、前端预校验、内核二次校验，金额最终 2 位小数 `MidpointAwayFromZero` |
 | 28 | 4.5 / 4.6 / T16 | Windows 文本大小上限、紧凑布局重排、标题栏取舍与 F1 说明未定义 | T16 明确：读取 `TextScaleFactor`（100–225）并钳制到 100–150%；根字号驱动全部 rem 尺寸；≥120% 时科学/程序员键盘 6→4、统计函数 4→3，标题栏隐藏重复历史按钮与 dev 徽标，分段控件收紧内边距；日期/右键弹层不超过视口；F1 快捷键说明与「跳到主要内容」纳入无障碍，`forced-colors` 使用系统色焦点轮廓 |
+| 29 | 8 / T17 | MSI 安装范围、WebView2 离线路径与未签名提示未写明 | T17 明确：NSIS 为 `currentUser`（实测免提权安装/卸载）；MSI 由 WiX 模板固定为 `perMachine`，非管理员会话被系统策略拒绝（1625），需管理员安装，已用 `/a` 管理安装验证载荷；WebView2 采用 silent `downloadBootstrapper`，Server 2022/离线需联网或预装 Runtime；无证书，SmartScreen 提示保留到签名接入 |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 

@@ -24,7 +24,6 @@ serde_json.workspace = true
 tauri = { workspace = true, features = [] }
 tauri-plugin-clipboard-manager.workspace = true
 tauri-plugin-log.workspace = true
-tauri-plugin-opener.workspace = true
 tauri-plugin-store.workspace = true
 tauri-plugin-window-state.workspace = true
 

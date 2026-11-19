@@ -278,3 +278,41 @@
 - `t16-light-en-US-shortcuts-150.png`（英文 150% 说明）
 - `t16-light-en-US-scientific-150.png`（英文 150% 科学型）
 - `t16-dark-en-US-worksheets-150.png`（英文/深色 150% 工作表）
+
+# T17 打包与安装冒烟 — 2026-11-19
+
+- 方式：`npx tauri build`（release：`opt-level=s`、`lto=thin`、`codegen-units=1`、`strip=true`、`panic=abort`）；NSIS `/S` 安装 → 启动（WebView2 CDP 9223）→ `uninstall.exe /S` 卸载；MSI 以非管理员 `/qn` 尝试安装，再用 `/a` 管理安装解包并启动载荷。
+- 环境：Windows Server 2022（10.0.20348）、WebView2 157.0.4341.60、当前会话非管理员。
+- 构建工具：WiX 3.14.1 从 NuGet 官方镜像取得后置于 `%LOCALAPPDATA%\tauri\WixTools314`（本机直连 GitHub 发行资产长时间停滞）；NSIS 3.11 由 Tauri 自动下载。
+
+## 产物
+
+| 产物 | 大小 | SHA-256 |
+|---|---|---|
+| `target/release/glx-calculator.exe` | 6,814,720 B | `eb15cdffebc660d8354a542a26e2b87f677e190e9bed392d12ed4d073d3782fc` |
+| `bundle/nsis/Glx Calculator_0.1.0_x64-setup.exe` | 2,399,069 B | `45bbb99316bd05144bf81d067ec087ad14c6aeecc38546dfea4a5a8a164d4219` |
+| `bundle/msi/Glx Calculator_0.1.0_x64_en-US.msi` | 3,252,224 B | `1ca26ca65fb090f28514151f6465ff2ef7a81e6c4f1907b28f383fd6103b47ee` |
+| `bundle/msi/Glx Calculator_0.1.0_x64_zh-CN.msi` | 3,248,128 B | `d096eee6c91a1affb234090525b246d5d210e69d6d1cdca95569f67aed88d2a0` |
+
+前端产物：JS 415.79 kB（gzip 128.78 kB）、CSS 58.82 kB（gzip 9.03 kB）、字体 48.25 kB；JS 低于 250 kB gzip 预算。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 图标 | `app-icon.svg` 生成 32/64/128/256/512px PNG、ICO、ICNS、Square/StoreLogo；`icon.ico` 用于窗口与安装包；移动端目录未保留 |
+| NSIS 安装 | `setup.exe /S` 退出码 0；安装到 `%LOCALAPPDATA%\Glx Calculator`；HKCU 卸载项显示 `Glx Calculator 0.1.0` |
+| 启动 | 安装版 `glx-calculator.exe` 窗口标题 `Glx Calculator`；CDP `main=true`、43 个按钮、根字号 16px，页面文案为 zh-CN |
+| NSIS 卸载 | `uninstall.exe /S` 退出码 0；安装目录与 HKCU 卸载项均移除；无遗留 `glx-calculator` 进程 |
+| MSI 常规安装 | 非管理员 `/qn` 返回 1625；日志显示系统策略禁用非管理员的 per-machine 安装，未写入 Program Files |
+| MSI 管理安装 | `msiexec /a` 退出码 0；载荷 `glx-calculator.exe` 6,814,720 B，与 NSIS 安装一致；直接启动窗口/CDP 正常 |
+| 冷启动 | release 3 次：1.53 s / 0.85 s / 0.93 s（首次含 50 ms CDP 轮询与握手；目标 <1.5 s，T16 同口径 1.45 s） |
+| 控制台 | 安装版与 MSI 载荷均能加载 `main`，无启动失败 |
+| 测试 | Rust 246 项、前端 196 项通过；fmt/clippy/typecheck/lint/check:i18n/build 全绿 |
+
+## 说明
+
+- 当前会话非管理员，MSI 的 `perMachine` 安装/卸载未在本机完成；已用管理安装验证包体完整性与载荷启动，需在管理员会话复验安装/卸载。
+- NSIS 为 `currentUser`，无需提权即可安装/卸载；适合普通用户分发。MSI 适合管理员集中部署。
+- 未配置代码签名证书，SmartScreen 可能提示；本迭代不启用自动更新。
+- 版本号保持 `0.1.0`，产物归档与发布说明在 T19 处理。
