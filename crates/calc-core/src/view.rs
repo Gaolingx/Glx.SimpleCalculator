@@ -94,3 +94,24 @@ pub struct UnitInfo {
 pub struct UnitConversion {
     pub value: String,
 }
+
+/// Calendar difference: non-negative Y/M/D components plus signed totals.
+///
+/// `total_days` is `to - from`; `total_weeks` is the truncated whole-week
+/// count of `total_days`. The UI localizes and formats both.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DateDifference {
+    pub years: u32,
+    pub months: u32,
+    pub days: u32,
+    pub total_days: i64,
+    pub total_weeks: i64,
+}
+
+/// Result of a date shift; `date` is a canonical ISO `YYYY-MM-DD` string.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DateShift {
+    pub date: String,
+}

@@ -642,3 +642,66 @@ export async function refreshCurrency(): Promise<CurrencyStatus> {
   }
   return normalizeCurrencyStatus(await invokeCommand<unknown>("currency_refresh"));
 }
+
+/** Mirrors `calc_core::view::DateDifference`. Components are non-negative. */
+export interface DateDifferenceResult {
+  years: number;
+  months: number;
+  days: number;
+  /** Signed `to - from` in days. */
+  totalDays: number;
+  /** Truncated whole weeks of `totalDays`. */
+  totalWeeks: number;
+}
+
+export interface DateShiftInput {
+  date: string;
+  years: number;
+  months: number;
+  weeks: number;
+  days: number;
+}
+
+function isInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value);
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return isInteger(value) && value >= 0;
+}
+
+export function normalizeDateDifference(value: unknown): DateDifferenceResult {
+  if (
+    !isRecord(value) ||
+    !isNonNegativeInteger(value.years) ||
+    !isNonNegativeInteger(value.months) ||
+    !isNonNegativeInteger(value.days) ||
+    !isInteger(value.totalDays) ||
+    !isInteger(value.totalWeeks)
+  ) {
+    throw new IpcError("INTERNAL");
+  }
+  return {
+    years: value.years,
+    months: value.months,
+    days: value.days,
+    totalDays: value.totalDays,
+    totalWeeks: value.totalWeeks,
+  };
+}
+
+/** Returns the canonical calendar difference between two ISO dates. */
+export async function dateDiff(from: string, to: string): Promise<DateDifferenceResult> {
+  return normalizeDateDifference(
+    await invokeCommand<unknown>("date_diff", { from, to }),
+  );
+}
+
+/** Returns the resulting ISO date after applying the shift. */
+export async function dateAdd(input: DateShiftInput): Promise<string> {
+  const result = await invokeCommand<unknown>("date_add", { ...input });
+  if (!isRecord(result) || typeof result.date !== "string" || result.date === "") {
+    throw new IpcError("INTERNAL");
+  }
+  return result.date;
+}

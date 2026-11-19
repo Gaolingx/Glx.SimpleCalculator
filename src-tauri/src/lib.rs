@@ -7,6 +7,7 @@
 
 mod clipboard;
 pub mod currency;
+mod date;
 mod history;
 mod session;
 mod settings;
@@ -61,6 +62,8 @@ pub fn run() {
             units::convert_unit,
             currency::currency_status,
             currency::currency_refresh,
+            date::date_diff,
+            date::date_add,
         ])
         .run(tauri::generate_context!())
         .expect("failed to launch Glx Calculator");

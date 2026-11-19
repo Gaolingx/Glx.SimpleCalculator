@@ -192,3 +192,27 @@
 - `t13-light-zh-CN-currency.png`（在线态与来源日期）
 - `t13-light-zh-CN-currency-refresh-failed.png`（刷新失败保留缓存）
 - `t13-dark-en-US-currency-offline.png`（离线无缓存）
+
+# T14 日期计算 — 2026-11-19
+
+- 方式：Edge headless CDP（440×820，1x，light/zh-CN 与 dark/en-US），`Page.addScriptToEvaluateOnNewDocument` 注入 mock `__TAURI_INTERNALS__`（设置、`date_diff`/`date_add` 的 JS 镜像）渲染真实前端；闰年、月末夹取与越界由 Rust 日期集成测试覆盖。
+- 交互：点击结束日期触发器 → 下个月 → 15 日；切换「日期加减」→ 减 → 个月；dark 下打开起始日期并切换到 2024-02 / 2023-02。
+
+## 结果
+
+| 项 | 结果 |
+|---|---|
+| 布局 | `documentElement` 440/440、820/820；`main` 376/376、776/776；按钮无越界（20 / 54 个） |
+| 日期差 | `2026-11-19 → 2026-12-15` 显示 `0 年 0 个月 26 天`，总天数 26、总周数 3 周 5 天 |
+| 日期加减 | 起始 `2026-11-19` − 1 个月 = `2026-10-19`，公式与 ISO 日期同步 |
+| 日历弹层 | dark/en-US 312×359，位于视口内（左 104、上 271、右 416、下 630） |
+| 闰年 | 2024-02 可选中 29 日；上一年的 2023-02 无 29 日 |
+| 主题/语言 | light/zh-CN 与 dark/en-US 均无裸键、无截断、0 console error / 0 异常 |
+| 测试 | 前端 180 项、Rust 227 项通过 |
+
+## 截图
+
+- `t14-light-zh-CN-datecalc.png`（日期差 26 天与总计）
+- `t14-light-zh-CN-date-add.png`（减 1 个月）
+- `t14-dark-en-US-datecalc.png`（同日起始态）
+- `t14-dark-en-US-date-picker.png`（日历弹层，2024-02 含 29 日）

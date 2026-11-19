@@ -1,5 +1,38 @@
 {
   "title": "Date calculation",
-  "difference": "Date difference",
-  "addSubtract": "Add or subtract"
+  "mode": "Calculation mode",
+  "difference": "Difference",
+  "addSubtract": "Add or subtract",
+  "from": "Start date",
+  "to": "End date",
+  "swap": "Swap dates",
+  "startDate": "Start date",
+  "amount": "Amount",
+  "amountPlaceholder": "Enter a positive integer",
+  "unit": "Unit",
+  "direction": "Operation",
+  "add": "Add",
+  "subtract": "Subtract",
+  "result": "Result",
+  "resultHint": "Pick dates to calculate",
+  "yearsMonthsDays": "{{years}} years, {{months}} months, {{days}} days",
+  "totalDays": "Total days: {{days}}",
+  "totalWeeks": "Total weeks: {{weeks}} weeks, {{days}} days",
+  "invalidAmount": "Enter a positive integer",
+  "shiftFormula": "{{date}} {{sign}} {{amount}} {{unit}}",
+  "units": {
+    "days": "days",
+    "weeks": "weeks",
+    "months": "months",
+    "years": "years"
+  },
+  "picker": {
+    "placeholder": "Select a date",
+    "today": "Today",
+    "clear": "Clear",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "previousYear": "Previous year",
+    "nextYear": "Next year"
+  }
 }

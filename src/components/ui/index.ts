@@ -4,6 +4,8 @@ export { SoftCard } from "./SoftCard";
 export type { SoftCardPadding, SoftCardProps } from "./SoftCard";
 export { SoftCombobox } from "./SoftCombobox";
 export type { ComboboxOption, SoftComboboxProps } from "./SoftCombobox";
+export { DatePicker } from "./DatePicker";
+export type { DatePickerProps } from "./DatePicker";
 export { SoftInput } from "./SoftInput";
 export type { SoftInputProps } from "./SoftInput";
 export { SoftMenu } from "./SoftMenu";

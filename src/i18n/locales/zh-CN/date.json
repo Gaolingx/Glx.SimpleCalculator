@@ -1,5 +1,38 @@
 {
   "title": "日期计算",
+  "mode": "计算方式",
   "difference": "日期差",
-  "addSubtract": "日期加减"
+  "addSubtract": "日期加减",
+  "from": "起始日期",
+  "to": "结束日期",
+  "swap": "交换日期",
+  "startDate": "起始日期",
+  "amount": "数量",
+  "amountPlaceholder": "输入正整数",
+  "unit": "单位",
+  "direction": "运算方式",
+  "add": "加",
+  "subtract": "减",
+  "result": "结果",
+  "resultHint": "选择日期后自动计算",
+  "yearsMonthsDays": "{{years}} 年 {{months}} 个月 {{days}} 天",
+  "totalDays": "总天数：{{days}} 天",
+  "totalWeeks": "总周数：{{weeks}} 周 {{days}} 天",
+  "invalidAmount": "请输入正整数",
+  "shiftFormula": "{{date}} {{sign}} {{amount}} {{unit}}",
+  "units": {
+    "days": "天",
+    "weeks": "周",
+    "months": "个月",
+    "years": "年"
+  },
+  "picker": {
+    "placeholder": "选择日期",
+    "today": "今天",
+    "clear": "清除",
+    "previousMonth": "上个月",
+    "nextMonth": "下个月",
+    "previousYear": "上一年",
+    "nextYear": "下一年"
+  }
 }

@@ -6,6 +6,7 @@
 //! - errors cross the IPC boundary as `{ code, args }`.
 
 pub mod command;
+pub mod date;
 pub mod engine;
 pub mod error;
 pub mod mode;
@@ -22,6 +23,6 @@ pub use mode::{AngleUnit, Mode, Radix, WordSize};
 pub use units::{RateTable, UnitCategory};
 pub use value::Number;
 pub use view::{
-    CalcView, ProgrammerView, StatisticsView, UnitCatalog, UnitCategoryInfo, UnitConversion,
-    UnitInfo,
+    CalcView, DateDifference, DateShift, ProgrammerView, StatisticsView, UnitCatalog,
+    UnitCategoryInfo, UnitConversion, UnitInfo,
 };

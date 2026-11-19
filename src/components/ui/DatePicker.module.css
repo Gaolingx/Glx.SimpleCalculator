@@ -1,0 +1,310 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.label {
+  color: var(--color-text-muted);
+  font-size: var(--text-label);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 3.4rem;
+  padding: 0.875rem 1rem;
+  border: none;
+  border-radius: var(--radius-btn);
+  background: var(--color-surface-3);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-base) var(--ease-soft),
+    box-shadow var(--duration-base) var(--ease-soft);
+}
+
+.trigger:hover:not(:disabled) {
+  background: var(--color-surface-2);
+}
+
+.trigger:focus-visible,
+.trigger[aria-expanded="true"] {
+  outline: none;
+  background: var(--color-surface);
+  box-shadow: var(--focus-ring);
+}
+
+.trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.placeholder {
+  color: var(--color-text-muted);
+}
+
+.calendarIcon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.popup {
+  position: fixed;
+  z-index: var(--z-menu);
+  width: 19.5rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card-hover);
+  animation: picker-in var(--duration-fast) var(--ease-soft);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-bottom: 0.5rem;
+}
+
+.nav {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.625rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-soft),
+    color var(--duration-fast) var(--ease-soft);
+}
+
+.nav:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+.nav:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.headerLabel {
+  flex: 1;
+  min-width: 0;
+  min-height: 2rem;
+  padding: 0 0.375rem;
+  border: none;
+  border-radius: 0.625rem;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.headerLabel:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+.headerLabel:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 0.25rem;
+}
+
+.weekday {
+  color: var(--color-text-muted);
+  font-size: var(--text-label);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.6rem;
+  text-align: center;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.125rem;
+}
+
+.day,
+.blank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.15rem;
+  border-radius: 0.7rem;
+}
+
+.day {
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-soft),
+    color var(--duration-fast) var(--ease-soft);
+}
+
+.day:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+.day:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.today {
+  box-shadow: inset 0 0 0 1px var(--color-primary-text);
+  color: var(--color-primary-text);
+}
+
+.selected,
+.selected:hover {
+  background: var(--color-primary-fill);
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
+  box-shadow: none;
+}
+
+.gridMonths {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.25rem;
+}
+
+.cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-body);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-soft),
+    color var(--duration-fast) var(--ease-soft);
+}
+
+.cell:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+.cell:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.selectedCell {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-surface-3);
+}
+
+.footerButton {
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  border: none;
+  border-radius: 0.625rem;
+  background: transparent;
+  color: var(--color-primary-text);
+  font: inherit;
+  font-size: var(--text-label);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-soft);
+}
+
+.footerButton:hover {
+  background: var(--color-primary-soft);
+}
+
+.footerButton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@keyframes picker-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popup {
+    animation: none;
+  }
+
+  .trigger,
+  .nav,
+  .day,
+  .cell,
+  .footerButton {
+    transition: none;
+  }
+}

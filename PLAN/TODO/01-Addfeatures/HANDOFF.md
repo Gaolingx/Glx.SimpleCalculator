@@ -9,7 +9,7 @@
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | 空项目，仅 `README.md` 与设计稿，initial commit `48498a0` |
-| 当前进度 | **T13 完成**（2026-11-19）：ECB 汇率拉取/缓存/TTL/离线与手动刷新，货币换算已打通；下一步 T14 |
+| 当前进度 | **T14 完成**（2026-11-19）：日期差/日期加减、`DatePicker`、闰年与月末夹取已打通；下一步 T15 |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -252,6 +252,18 @@ setx PATH "%PATH%;E:\node"
 - 截图：`docs/qa/2026-11-19/t13-light-zh-CN-currency.png`、`t13-light-zh-CN-currency-refresh-failed.png`、`t13-dark-en-US-currency-offline.png`。
 
 
+**T14 实测记录（2026-11-19）**
+
+- 内核：新增 `crates/calc-core/src/date.rs`。日期严格为 `YYYY-MM-DD`（0001–9999）；`difference` 输出日历分量差（先年、再月、再日，月末夹取后借位），分量非负而 `totalDays` 保留方向、`totalWeeks` 截断；`shift` 先按月（含月末夹取）再加天/周，越界返回 `OVERFLOW`，非法日期/数量返回 `INVALID_INPUT`。新增 `chrono@0.4.45`（仅 `std`，不启用时钟特性）。
+- 契约：新增 `date_diff(from,to)` → `DateDifference {years,months,days,totalDays,totalWeeks}` 与 `date_add(date,years,months,weeks,days)` → `DateShift {date}`；`ipc.ts` 同步窄类型与防御性归一化（分量必须为非负安全整数）。
+- 控件：新增 `DatePicker`（portal 日历、周一起始、今天/清除、日/月/年三级视图、方向键 ±1/±7、Home/End、PageUp/Down ±1 月、Shift ±1 年、Enter 选择、Esc 逐级返回、外点/滚动/缩放关闭并回焦触发器）；触发器使用本地化数字短格式，结果区使用本地化长格式。
+- 页面：`DateCalcPage` 提供「日期差 / 日期加减」分段切换；日期差展示 Y/M/D、总天数、总周数并复制总天数；日期加减按加/减 × 天/周/月/年计算，展示本地化结果、公式与 ISO 日期，复制 ISO；数量仅接受正整数，非法时本地提示且不调用内核。
+- 测试：Rust 227 项（calc-core 189 = lib 133 + 契约 8 + 黄金 1 + 程序员 16 + 科学 9 + 统计 11 + 单位 5 + 日期 6；shell 38 = 33 单测 + 5 集成）；前端 180 项（新增 `lib/date` 9、`DatePicker` 9、`DateCalcPage` 9）。
+- 门禁：`cargo fmt --check` / `cargo clippy --workspace --all-targets -- -D warnings` / `cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 403.05 kB（gzip 124.98 kB）、CSS 53.96 kB（gzip 8.40 kB），仍在 250 kB gzip 预算内。
+- QA（Edge headless CDP，440×820）：`documentElement` 440/440、820/820，`main` 376/776，按钮无越界，0 异常；light/zh-CN 日期差 `2026-11-19 → 2026-12-15` 得 `0 年 0 个月 26 天`（总天数 26、总周数 3 周 5 天），日期加减减 1 个月得 `2026-10-19`；dark/en-US 日历弹层 312×359 位于视口内，2024-02 存在 29 日、2023-02 不存在 29 日。截图流程注入 mock `__TAURI_INTERNALS__`，真实内核由 Rust 日期集成测试覆盖。
+- 截图：`docs/qa/2026-11-19/t14-light-zh-CN-datecalc.png`、`t14-light-zh-CN-date-add.png`、`t14-dark-en-US-datecalc.png`、`t14-dark-en-US-date-picker.png`。
+
+
 ### 1.4 参考截图 → 布局结论
 
 - 自定义标题栏：左侧应用名 + `dev` 徽标，右侧最小化/最大化/关闭；内容区可拖拽。
@@ -472,6 +484,7 @@ pub enum CalcCommand {
 > T9 新增 `UnaryOp::Not`（`{"type":"unary","op":"not"}`）；`Digit { digit }` 协议接受 0–15 以覆盖十六进制 A–F，程序员内核按当前 radix 拦截越界数字。`ProgrammerView` 的 `decimal` 为有符号投影，其余进制为字宽内无符号补码，`bits` 为固定字宽的 MSB-first 串。
 > T12 新增纯函数命令 `units_catalog()` → `UnitCatalog { categories[{id, units[{id, symbol}]}] }` 与 `convert_unit(category, value, from, to)` → `{value}`；业务错误以 `ErrorInfo` 返回（`UNKNOWN_UNIT` / `INVALID_INPUT` / `OVERFLOW` / `CURRENCY_OFFLINE`）。汇率表由 T13 注入；本任务货币换算固定返回 `CURRENCY_OFFLINE`。
 > T13 新增 `currency_status()` → `CurrencyStatus` 与 `currency_refresh()` → `CurrencyStatus`。缓存位于 `currency-cache.json`（TTL 24h），启动后仅过期时后台刷新；手动刷新 5s 内最多一次（冷却期返回当前状态）。刷新失败返回 `NETWORK_ERROR` 且保留旧缓存；`convert_unit` 的货币分支自动注入缓存汇率，无缓存仍返回 `CURRENCY_OFFLINE`。
+> T14 新增纯函数 `date_diff(from,to)` → `DateDifference {years,months,days,totalDays,totalWeeks}` 与 `date_add(date,years,months,weeks,days)` → `DateShift {date}`。日期限 `0001-01-01`–`9999-12-31`；先按月（月末夹取）再加天/周；越界为 `OVERFLOW`，非法日期/数量为 `INVALID_INPUT`。
 
 契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
@@ -765,7 +778,7 @@ src/i18n/locales/en-US/...（同构）
 | T11 | 统计型 | M5 | T4 | 数据集面板、统计函数、空集/单元素边界 | 与 Excel 样本一致 | done |
 | T12 | 单位注册表 + 转换页 | M6 | T3 | 11 类单位数据、`convert_unit`、双下拉/换向 UI | 每类 3 组黄金值；温度往返 | done |
 | T13 | 汇率 | M6 | T12 | ECB 拉取/解析/缓存/TTL/离线 UI/手动刷新 | 断网缓存；5s 限速；交叉汇率 | done |
-| T14 | 日期计算 | M7 | T3 | 日期差/加减、`DatePicker`、本地化格式 | 闰年/月末夹取单测 | pending |
+| T14 | 日期计算 | M7 | T3 | 日期差/加减、`DatePicker`、本地化格式 | 闰年/月末夹取单测 | done |
 | T15 | 工作表 | M8 | T3 | 注册表、抵押/油耗/租赁、通用表单与结果卡 | 黄金月供 ±0.01；字段级校验 | pending |
 | T16 | 打磨：DPI/无障碍/性能 | M9 | T5–T15 | DPI 矩阵、键盘全流程、reduced-motion、性能采样 | 冷启动/输入延迟/IPC p95 | pending |
 | T17 | 打包 | M9 | T16 | 图标、NSIS/MSI、WebView2 策略、体积优化 | 安装/卸载/启动 | pending |
@@ -901,11 +914,11 @@ npm run typecheck && npm run test
 ### M7 日期计算（1 人日）
 
 **任务**
-- [ ] 日期差：Y/M/D + 总天数 + 总周数（含起始日选项 P2）
-- [ ] 日期加减：天/周/月/年，月末夹取、闰年
-- [ ] `DatePicker` 自定义控件（月/年切换、键盘）
-- [ ] 本地化日期格式；结果卡片与复制
-- [ ] 单测：2/28→3/1、1/31+1 月、闰年 2/29、跨年
+- [x] 日期差：Y/M/D + 总天数 + 总周数（含起始日选项 P2）
+- [x] 日期加减：天/周/月/年，月末夹取、闰年
+- [x] `DatePicker` 自定义控件（月/年切换、键盘）
+- [x] 本地化日期格式；结果卡片与复制
+- [x] 单测：2/28→3/1、1/31+1 月、闰年 2/29、跨年
 
 **验收**
 - 2024-02-29 被识别为有效日期；2023-02-29 不可选
@@ -1170,6 +1183,7 @@ rm -rf src-tauri/target/release/bundle
 | 23 | 3.4 / 3.6 | 单窗口仅一个 Engine，切到科学页会沿用基本模式（科学键返回 `UNSUPPORTED`），历史恢复后角度制也会丢失 | T8 改为每窗口 + 每模式一个 Engine，新增 `session_select(mode)`；页面挂载激活对应会话，历史恢复科学条目后重新下发当前角度制 |
 | 24 | 4.7 / T6 | 一元函数结果按 `=` 会把表达式行与历史退化为 `0.5 =`，且定义域错误会清空 `tan(90)` | T8 让一元表达式在按 `=` 时保留（`sin(30) =`），并在求值前写入表达式，使定义域错误仍显示原输入 |
 | 25 | 3.5 / 6.0 T12 | 货币换算在 T12 尚无汇率数据，容易与“11 类全部可用”混淆 | T12 交付 11 类元数据、纯交叉换算与 fixture 测试；`convert_unit` 对货币返回 `CURRENCY_OFFLINE`，页面提示联网后更新；T13 注入 ECB 缓存后启用。负值策略同时明确：温度/速度/角度/汇率允许，长度/面积/体积/质量/压力/功率/时间拒绝 |
+| 26 | 3.10 / T14 | 日期差的方向、按月加减“先夹取还是后夹取”、复制格式未定义 | T14 明确：分量在较早→较晚区间计算且非负，`totalDays` 带符号、`totalWeeks` 截断；先按月夹取月末再加天/周；日期限 0001–9999，越界 `OVERFLOW`；复制日期用 ISO、结果区用本地化长格式、触发器用本地化数字短格式 |
 
 **仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
 
