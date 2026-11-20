@@ -331,9 +331,9 @@ setx PATH "%PATH%;E:\node"
 - 范围：v0.1.0 发布后的 5 个 UI 提交（`6febb1c`、`1c43989`、`ddd4f4b`、`01c279f`、`2a266f4`）补记为 T20，并补齐 T5/M2 遗留的多槽记忆面板；本任务不改变 v0.1.0 归档产物。
 - UI 缩放：设置新增 50–250%（步进 25）滑杆与数值输入，持久化 `uiZoom`；根字号为 `16px × --ui-scale × --ui-zoom`，≥120% 的键盘重排同时考虑两者；预览拖动即时生效，失焦/回车提交，非法值本地提示。浏览器预览与真实设置读写均可用。
 - 动效：模式切换使用 View Transitions，清除时闪烁显示值（Web Animations，reduced-motion 仍可运行）；`SoftMenu`/`SoftCombobox`/`DatePicker`/`SoftToast`/`SoftDialog` 统一 `usePresence` 退出动画与 motion 令牌；导航 tooltip 点击后残留已修复；基本/科学/程序员/统计页统一内边距、间距与 52rem 断点。
-- 多槽记忆：内核新增 `memory::MemoryStore<T>`（新建在前、`id` 定位、`None` 表示最新槽或清空全部）。契约由 `CalcView.memory: Option<String>` 改为 `memories: [{id, value}]`，`CalcCommand::Memory { op, id? }`；MC 清空全部、MR/M+/M− 默认作用于最新槽，指定 `id` 可命中旧槽；M▾ 面板列出全部记忆，点击恢复、底部清空全部。记忆仍为会话内、按模式隔离；程序员模式切换字宽时归一化全部槽位。
+- 多槽记忆：内核新增 `memory::MemoryStore<T>`（新建在前、`id` 定位、`None` 表示最新槽或清空全部）。契约由 `CalcView.memory: Option<String>` 改为 `memories: [{id, value}]`，`CalcCommand::Memory { op, id? }`；MC 清空全部、MR/M+/M− 默认作用于最新槽，指定 `id` 可命中旧槽；M▾ 面板列出全部记忆，点击恢复、底部清空全部。记忆仍为会话内、按模式隔离；程序员模式切换字宽时归一化全部槽位。M▾ 面板内容超高时可滚动，菜单内部滚动不会关闭面板（仅页面级滚动关闭），由 `SoftMenu` 回归测试覆盖。
 - 小数位决策：§3.7/M2 中的「小数位设置」在功能矩阵与 README 均无定义，评估后移出本迭代范围；删除计划项，不引入与有效数字/E 记法冲突的新显示语义。
-- 测试：Rust **250 项**（+3：多槽新建在前/按 id 命中、旧槽 M+、未知 id 拒绝）；前端 **206 项/26 文件**（+4：`MemoryBar` 面板与工具栏命令）。`cargo fmt --check`、`clippy -D warnings`、`cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 421.14 kB（gzip 130.42 kB）、CSS 61.53 kB（gzip 9.44 kB）、字体 48.25 kB，仍在 250 kB gzip 预算内。
+- 测试：Rust **250 项**（+3：多槽新建在前/按 id 命中、旧槽 M+、未知 id 拒绝）；前端 **208 项/26 文件**（+6：`MemoryBar` 4、`SoftMenu` 2）。`cargo fmt --check`、`clippy -D warnings`、`cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 421.22 kB（gzip 130.43 kB）、CSS 61.53 kB（gzip 9.44 kB）、字体 48.25 kB，仍在 250 kB gzip 预算内。
 - QA：浏览器预览抽样验证缩放 100%/150%/250% 与浅/深主题、中/英语言组合；记忆面板因浏览器预览不执行计算，改由 jsdom 组件测试覆盖（打开、最新在前、按 id 恢复、清空全部、空列表禁用）。v0.1.0 安装包与 `release/v0.1.0/` 未重建，仍对应 T19 构建；下次发布需升版本并重新打包。
 - 文档：§2.1 记忆验收改为多槽口径，§3.6 补 T20 契约，§10 回填 8 项决策，§11 DoD 勾选，README 基线与 QA 索引同步；新增 `docs/qa/2026-11-20/README.md`。
 
@@ -1160,7 +1160,7 @@ npm run check:i18n
 - [x] 文案全部走 i18n（两份语言文件键一致；`check:i18n` 13 文件 × 2 语言）
 - [x] 复制/粘贴、历史、分组开关行为一致（T18 合并回归 20/20）
 - [x] 无 `any`、无未处理 Promise、无控制台错误（`typecheck`/`lint`；T18 与 T20 抽样 0 error）
-- [x] `fmt / clippy / test / typecheck / check:i18n` 全绿（T20：Rust 250、前端 206、build 通过）
+- [x] `fmt / clippy / test / typecheck / check:i18n` 全绿（T20：Rust 250、前端 208、build 通过）
 - [x] 变更未越过 3.10 的模块边界（记忆列表位于 `calc-core`，Tauri/前端只做适配与渲染）
 - [x] 测试按 7.0 随任务新增/更新，未删除失败测试或放宽断言（T20 新增 Rust 3 项、前端 4 项）
 - [x] IPC 契约变更已同步 `view.rs` / `ipc.ts` / 本文档，并有契约测试（`memories[]` + `Memory { id? }`）

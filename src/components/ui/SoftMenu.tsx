@@ -94,16 +94,24 @@ export function SoftMenu({ open, x, y, items, onClose, label }: SoftMenuProps) {
       }
     };
     const handleViewportChange = () => onCloseRef.current();
+    const handleScroll = (event: Event) => {
+      // Scroll events do not bubble, but the window capture listener still sees
+      // the menu's own scrolling; only page-level scrolls should close it.
+      if (event.target instanceof Node && menuRef.current?.contains(event.target)) {
+        return;
+      }
+      onCloseRef.current();
+    };
 
     document.addEventListener("pointerdown", handlePointer, true);
     document.addEventListener("keydown", handleKey, true);
     window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
+    window.addEventListener("scroll", handleScroll, true);
     return () => {
       document.removeEventListener("pointerdown", handlePointer, true);
       document.removeEventListener("keydown", handleKey, true);
       window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
+      window.removeEventListener("scroll", handleScroll, true);
       previous?.focus?.();
     };
   }, [open]);

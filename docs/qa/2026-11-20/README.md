@@ -7,7 +7,7 @@
 | 项 | 值 |
 |---|---|
 | 代码 | HEAD（T20，含 `memories[]` 契约与 M▾ 面板） |
-| 前端 | Vitest 206 项 / 26 文件；JS 421.14 kB（gzip 130.42 kB）、CSS 61.53 kB（gzip 9.44 kB） |
+| 前端 | Vitest 208 项 / 26 文件；JS 421.22 kB（gzip 130.43 kB）、CSS 61.53 kB（gzip 9.44 kB） |
 | Rust | 250 项；`fmt` / `clippy -D warnings` / `test` 全部通过 |
 | 安装包 | 未重建；`release/v0.1.0/` 仍对应 T19 构建 |
 

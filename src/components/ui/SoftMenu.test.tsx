@@ -82,4 +82,21 @@ describe("SoftMenu", () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("stays open when the menu list itself scrolls", () => {
+    const { onClose } = renderMenu();
+    const menu = screen.getByRole("menu", { name: "测试菜单" });
+
+    fireEvent.scroll(menu);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("closes when the page scrolls", () => {
+    const { onClose } = renderMenu();
+
+    fireEvent.scroll(window);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
