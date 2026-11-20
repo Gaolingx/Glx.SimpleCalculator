@@ -128,11 +128,11 @@ export function ProgrammerPage() {
           valueText={valueText}
           error={transportError ?? view.error?.code ?? null}
           grouping={grouping}
-          memory={view.memory !== null}
+          memory={view.memories.length > 0}
           onCopy={() => copyValue(view.value)}
           flashToken={clearPulse}
         />
-        <MemoryBar hasMemory={view.memory !== null} onCommand={send} />
+        <MemoryBar memories={view.memories} onCommand={send} />
         <SoftSegmentedControl
           value={wordSize}
           options={wordSizeOptions}

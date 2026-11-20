@@ -69,6 +69,6 @@
     ],
     "expression": "",
     "value": "7",
-    "memory": "7"
+    "memories": ["7"]
   }
 ]

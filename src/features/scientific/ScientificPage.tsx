@@ -75,12 +75,12 @@ export function ScientificPage() {
           value={view.value}
           error={transportError ?? view.error?.code ?? null}
           grouping={grouping}
-          memory={view.memory !== null}
+          memory={view.memories.length > 0}
           notation={scientificNotation ? "scientific" : "auto"}
           onCopy={() => copyValue(view.value)}
           flashToken={clearPulse}
         />
-        <MemoryBar hasMemory={view.memory !== null} onCommand={send} />
+        <MemoryBar memories={view.memories} onCommand={send} />
         <div className={styles.toolbar}>
           <SoftSegmentedControl
             value={angleUnit}

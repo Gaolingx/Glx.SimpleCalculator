@@ -155,7 +155,7 @@ export type CalcCommand =
   | { type: "equals" }
   | { type: "percent" }
   | { type: "toggleSign" }
-  | { type: "memory"; op: MemoryOp }
+  | { type: "memory"; op: MemoryOp; id?: string }
   | { type: "setAngleUnit"; unit: AngleUnit }
   | { type: "setRadix"; radix: Radix }
   | { type: "setWordSize"; size: WordSize }
@@ -233,12 +233,18 @@ export interface UnitConversionInput {
   to: string;
 }
 
+/** Mirrors `calc_core::view::MemoryView`; newest first. */
+export interface MemoryView {
+  id: string;
+  value: string;
+}
+
 /** Mirrors `calc_core::view::CalcView`. */
 export interface CalcView {
   mode: CalcMode;
   expression: string;
   value: string;
-  memory: string | null;
+  memories: MemoryView[];
   programmer: ProgrammerView | null;
   statistics: StatisticsView | null;
   error: ErrorInfo | null;
@@ -249,7 +255,7 @@ export function emptyCalcView(mode: CalcMode = "basic"): CalcView {
     mode,
     expression: "",
     value: "",
-    memory: null,
+    memories: [],
     programmer: null,
     statistics: null,
     error: null,
@@ -330,6 +336,18 @@ function normalizeStatisticsView(value: unknown): StatisticsView | null {
   };
 }
 
+function normalizeMemories(value: unknown): MemoryView[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((entry) => {
+    if (!isRecord(entry) || typeof entry.id !== "string" || typeof entry.value !== "string") {
+      return [];
+    }
+    return [{ id: entry.id, value: entry.value }];
+  });
+}
+
 /** Defensive normalization so a malformed payload cannot crash the page. */
 export function normalizeCalcView(value: unknown): CalcView {
   if (!isRecord(value)) {
@@ -339,7 +357,7 @@ export function normalizeCalcView(value: unknown): CalcView {
     mode: isCalcMode(value.mode) ? value.mode : "basic",
     expression: typeof value.expression === "string" ? value.expression : "",
     value: typeof value.value === "string" ? value.value : "",
-    memory: typeof value.memory === "string" ? value.memory : null,
+    memories: normalizeMemories(value.memories),
     programmer: normalizeProgrammerView(value.programmer),
     statistics: normalizeStatisticsView(value.statistics),
     error: normalizeErrorInfo(value.error),

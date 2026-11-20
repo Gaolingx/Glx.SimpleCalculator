@@ -7,10 +7,11 @@
 
 use crate::command::{BinaryOp, CalcCommand, MemoryOp, UnaryOp};
 use crate::error::{CalcResult, ErrorCode, ErrorInfo};
+use crate::memory::MemoryStore;
 use crate::mode::{Mode, Radix, WordSize};
 use crate::ops::programmer as prog;
 use crate::parser;
-use crate::view::CalcView;
+use crate::view::{CalcView, MemoryView};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Token {
@@ -39,7 +40,7 @@ pub(crate) struct ProgrammerSession {
     tokens: Vec<Token>,
     result: Option<i64>,
     finished: Option<Finished>,
-    memory: Option<i64>,
+    memory: MemoryStore<i64>,
     last_op: Option<(BinaryOp, i64)>,
     replace_entry: bool,
     error: Option<ErrorInfo>,
@@ -54,7 +55,7 @@ impl Default for ProgrammerSession {
             tokens: Vec::new(),
             result: None,
             finished: None,
-            memory: None,
+            memory: MemoryStore::default(),
             last_op: None,
             replace_entry: false,
             error: None,
@@ -94,7 +95,7 @@ impl ProgrammerSession {
                 self.toggle_sign();
                 Ok(())
             }
-            CalcCommand::Memory { op } => self.memory(op),
+            CalcCommand::Memory { op, id } => self.memory(op, id.as_deref()),
             CalcCommand::SetRadix { radix } => {
                 self.set_radix(radix);
                 Ok(())
@@ -157,9 +158,15 @@ impl ProgrammerSession {
             mode: Mode::Programmer,
             expression: self.expression(),
             value,
-            memory: self
+            memories: self
                 .memory
-                .map(|memory| prog::format(memory, self.radix, self.word_size)),
+                .entries()
+                .iter()
+                .map(|entry| MemoryView {
+                    id: entry.id.to_string(),
+                    value: prog::format(entry.value, self.radix, self.word_size),
+                })
+                .collect(),
             programmer: Some(prog::view(current, self.radix, self.word_size)),
             statistics: None,
             error: self.error.clone(),
@@ -381,30 +388,50 @@ impl ProgrammerSession {
         }
     }
 
-    fn memory(&mut self, op: MemoryOp) -> CalcResult<()> {
+    fn memory(&mut self, op: MemoryOp, id: Option<&str>) -> CalcResult<()> {
+        let target = match id {
+            Some(raw) => Some(
+                raw.parse::<u64>()
+                    .map_err(|_| ErrorInfo::new(ErrorCode::InvalidInput))?,
+            ),
+            None => None,
+        };
         match op {
-            MemoryOp::Clear => self.memory = None,
+            MemoryOp::Clear => self.memory.remove(target),
             MemoryOp::Store => {
-                self.memory = Some(self.current_value()?);
+                self.memory.store(self.current_value()?);
                 self.replace_entry = true;
             }
             MemoryOp::Add | MemoryOp::Subtract => {
                 let value = self.current_value()?;
-                let base = self.memory.unwrap_or(0);
                 let operation = if matches!(op, MemoryOp::Add) {
                     BinaryOp::Add
                 } else {
                     BinaryOp::Subtract
                 };
-                self.memory = Some(prog::apply_binary(operation, base, value, self.word_size)?);
+                if let Some(index) = self.memory.index_of(target) {
+                    let base = *self.memory.value(index);
+                    let updated = prog::apply_binary(operation, base, value, self.word_size)?;
+                    *self.memory.value_mut(index) = updated;
+                } else if target.is_some() {
+                    return Err(ErrorInfo::new(ErrorCode::InvalidInput));
+                } else {
+                    let updated = prog::apply_binary(operation, 0, value, self.word_size)?;
+                    self.memory.store(updated);
+                }
                 self.replace_entry = true;
             }
             MemoryOp::Recall => {
-                if let Some(memory) = self.memory {
-                    self.begin_entry_if_needed();
-                    self.entry = Some(prog::format(memory, self.radix, self.word_size));
-                    self.replace_entry = true;
-                }
+                let Some(index) = self.memory.index_of(target) else {
+                    if target.is_some() {
+                        return Err(ErrorInfo::new(ErrorCode::InvalidInput));
+                    }
+                    return Ok(());
+                };
+                let memory = *self.memory.value(index);
+                self.begin_entry_if_needed();
+                self.entry = Some(prog::format(memory, self.radix, self.word_size));
+                self.replace_entry = true;
             }
         }
         Ok(())
@@ -437,7 +464,9 @@ impl ProgrammerSession {
             }
         }
         self.result = self.result.map(|value| prog::normalize(value, size));
-        self.memory = self.memory.map(|value| prog::normalize(value, size));
+        for value in self.memory.values_mut() {
+            *value = prog::normalize(*value, size);
+        }
         if let Some((_, rhs)) = &mut self.last_op {
             *rhs = prog::normalize(*rhs, size);
         }

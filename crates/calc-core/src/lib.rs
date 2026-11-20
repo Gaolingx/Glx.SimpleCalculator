@@ -9,6 +9,7 @@ pub mod command;
 pub mod date;
 pub mod engine;
 pub mod error;
+pub mod memory;
 pub mod mode;
 pub mod ops;
 pub mod parser;
@@ -24,7 +25,7 @@ pub use mode::{AngleUnit, Mode, Radix, WordSize};
 pub use units::{RateTable, UnitCategory};
 pub use value::Number;
 pub use view::{
-    CalcView, DateDifference, DateShift, ProgrammerView, StatisticsView, UnitCatalog,
+    CalcView, DateDifference, DateShift, MemoryView, ProgrammerView, StatisticsView, UnitCatalog,
     UnitCategoryInfo, UnitConversion, UnitInfo, WorksheetCatalog, WorksheetFieldInfo,
     WorksheetInfo, WorksheetResult, WorksheetResultInfo, WorksheetValue,
 };

@@ -75,6 +75,22 @@ fn commands_serialize_with_camel_case_tags() {
         json!({ "type": "setExpression", "text": "0xFF" })
     );
     assert_eq!(
+        serde_json::to_value(CalcCommand::Memory {
+            op: calc_core::MemoryOp::Store,
+            id: None,
+        })
+        .unwrap(),
+        json!({ "type": "memory", "op": "store" })
+    );
+    assert_eq!(
+        serde_json::to_value(CalcCommand::Memory {
+            op: calc_core::MemoryOp::Recall,
+            id: Some("3".into()),
+        })
+        .unwrap(),
+        json!({ "type": "memory", "op": "recall", "id": "3" })
+    );
+    assert_eq!(
         serde_json::to_value(CalcCommand::Recall {
             expression: "2 + 3 =".into(),
             value: "5".into()
@@ -127,6 +143,7 @@ fn commands_round_trip() {
         CalcCommand::Digit { digit: 0 },
         CalcCommand::Memory {
             op: calc_core::MemoryOp::Store,
+            id: None,
         },
         CalcCommand::OpenGroup,
         CalcCommand::CloseGroup,
@@ -172,7 +189,7 @@ fn calc_view_uses_camel_case_and_null_optionals() {
         mode: Mode::Programmer,
         expression: "255".into(),
         value: "255".into(),
-        memory: None,
+        memories: Vec::new(),
         programmer: Some(ProgrammerView {
             radix: Radix::Hexadecimal,
             word_size: WordSize::Byte,
@@ -189,7 +206,7 @@ fn calc_view_uses_camel_case_and_null_optionals() {
     let encoded = serde_json::to_value(&view).unwrap();
     assert_eq!(encoded["mode"], "programmer");
     assert_eq!(encoded["value"], "255");
-    assert_eq!(encoded["memory"], serde_json::Value::Null);
+    assert_eq!(encoded["memories"], json!([]));
     assert_eq!(encoded["error"], serde_json::Value::Null);
     assert_eq!(encoded["programmer"]["radix"], "hexadecimal");
     assert_eq!(encoded["programmer"]["wordSize"], "byte");
@@ -205,7 +222,7 @@ fn statistics_view_serializes_canonical_data() {
         mode: Mode::Statistics,
         expression: "mean(1, 2) =".into(),
         value: "1.5".into(),
-        memory: None,
+        memories: Vec::new(),
         programmer: None,
         statistics: Some(StatisticsView {
             data: vec!["1".into(), "2".into()],
@@ -278,6 +295,32 @@ fn command_validation_rejects_out_of_range_values() {
             .validate()
             .unwrap_err()
             .code,
+        ErrorCode::InvalidInput
+    );
+    assert!(
+        CalcCommand::Memory {
+            op: calc_core::MemoryOp::Recall,
+            id: None,
+        }
+        .validate()
+        .is_ok()
+    );
+    assert!(
+        CalcCommand::Memory {
+            op: calc_core::MemoryOp::Recall,
+            id: Some("3".into()),
+        }
+        .validate()
+        .is_ok()
+    );
+    assert_eq!(
+        CalcCommand::Memory {
+            op: calc_core::MemoryOp::Recall,
+            id: Some("not-a-number".into()),
+        }
+        .validate()
+        .unwrap_err()
+        .code,
         ErrorCode::InvalidInput
     );
     assert_eq!(

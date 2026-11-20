@@ -58,7 +58,7 @@ fn initial_view_is_empty() {
     assert_eq!(view.mode, Mode::Basic);
     assert_eq!(view.value, "");
     assert_eq!(view.expression, "");
-    assert_eq!(view.memory, None);
+    assert!(view.memories.is_empty());
     assert_eq!(view.error, None);
 }
 
@@ -157,13 +157,17 @@ fn clear_all_resets_session_but_keeps_memory() {
     type_text(&mut engine, "5");
     engine.apply(CalcCommand::Memory {
         op: MemoryOp::Store,
+        id: None,
     });
     type_text(&mut engine, "3");
     binary(&mut engine, BinaryOp::Add);
     let view = engine.apply(CalcCommand::ClearAll);
     assert_eq!(view.value, "");
     assert_eq!(view.expression, "");
-    assert_eq!(view.memory.as_deref(), Some("5"));
+    assert_eq!(
+        view.memories.first().map(|entry| entry.value.as_str()),
+        Some("5")
+    );
 }
 
 #[test]
@@ -312,38 +316,152 @@ fn memory_store_and_recall_round_trip() {
     type_text(&mut engine, "5");
     engine.apply(CalcCommand::Memory {
         op: MemoryOp::Store,
+        id: None,
     });
     engine.apply(CalcCommand::ClearAll);
     let view = engine.apply(CalcCommand::Memory {
         op: MemoryOp::Recall,
+        id: None,
     });
     assert_eq!(view.value, "5");
-    assert_eq!(view.memory.as_deref(), Some("5"));
+    assert_eq!(
+        view.memories.first().map(|entry| entry.value.as_str()),
+        Some("5")
+    );
 }
 
 #[test]
 fn memory_accumulates_with_add_and_subtract() {
     let mut engine = Engine::default();
     type_text(&mut engine, "5");
-    engine.apply(CalcCommand::Memory { op: MemoryOp::Add });
+    engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Add,
+        id: None,
+    });
     type_text(&mut engine, "2");
     engine.apply(CalcCommand::Memory {
         op: MemoryOp::Subtract,
+        id: None,
     });
-    assert_eq!(engine.view().memory.as_deref(), Some("3"));
+    assert_eq!(
+        engine
+            .view()
+            .memories
+            .first()
+            .map(|entry| entry.value.as_str()),
+        Some("3")
+    );
 }
 
 #[test]
-fn memory_clear_removes_value() {
+fn memory_clear_removes_every_slot() {
     let mut engine = Engine::default();
     type_text(&mut engine, "5");
     engine.apply(CalcCommand::Memory {
         op: MemoryOp::Store,
+        id: None,
+    });
+    type_text(&mut engine, "7");
+    engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Store,
+        id: None,
     });
     let view = engine.apply(CalcCommand::Memory {
         op: MemoryOp::Clear,
+        id: None,
     });
-    assert_eq!(view.memory, None);
+    assert!(view.memories.is_empty());
+}
+
+#[test]
+fn memory_keeps_newest_first_and_targets_explicit_ids() {
+    let mut engine = Engine::default();
+    type_text(&mut engine, "5");
+    engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Store,
+        id: None,
+    });
+    type_text(&mut engine, "7");
+    let stored = engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Store,
+        id: None,
+    });
+    let values: Vec<&str> = stored
+        .memories
+        .iter()
+        .map(|entry| entry.value.as_str())
+        .collect();
+    assert_eq!(values, ["7", "5"]);
+
+    let older = stored.memories[1].id.clone();
+    let recalled = engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Recall,
+        id: Some(older.clone()),
+    });
+    assert_eq!(recalled.value, "5");
+
+    let removed = engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Clear,
+        id: Some(older),
+    });
+    let values: Vec<&str> = removed
+        .memories
+        .iter()
+        .map(|entry| entry.value.as_str())
+        .collect();
+    assert_eq!(values, ["7"]);
+}
+
+#[test]
+fn memory_add_can_target_an_older_slot() {
+    let mut engine = Engine::default();
+    type_text(&mut engine, "10");
+    let first = engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Store,
+        id: None,
+    });
+    let id = first.memories[0].id.clone();
+    type_text(&mut engine, "2");
+    engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Store,
+        id: None,
+    });
+    type_text(&mut engine, "3");
+    let view = engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Add,
+        id: Some(id.clone()),
+    });
+
+    let values: Vec<&str> = view
+        .memories
+        .iter()
+        .map(|entry| entry.value.as_str())
+        .collect();
+    assert_eq!(values, ["2", "13"]);
+
+    let recalled = engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Recall,
+        id: Some(id),
+    });
+    assert_eq!(recalled.value, "13");
+}
+
+#[test]
+fn memory_rejects_unknown_slot_ids() {
+    let mut engine = Engine::default();
+    type_text(&mut engine, "5");
+    engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Store,
+        id: None,
+    });
+    let view = engine.apply(CalcCommand::Memory {
+        op: MemoryOp::Recall,
+        id: Some("999".into()),
+    });
+    assert_eq!(
+        view.error.map(|error| error.code),
+        Some(ErrorCode::InvalidInput)
+    );
 }
 
 #[test]

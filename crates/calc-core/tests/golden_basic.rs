@@ -11,7 +11,8 @@ struct GoldenCase {
     commands: Vec<CalcCommand>,
     expression: String,
     value: String,
-    memory: Option<String>,
+    #[serde(default)]
+    memories: Vec<String>,
     error: Option<ErrorCode>,
 }
 
@@ -33,7 +34,12 @@ fn golden_basic_cases_match_engine_output() {
             case.name
         );
         assert_eq!(view.value, case.value, "value: {}", case.name);
-        assert_eq!(view.memory, case.memory, "memory: {}", case.name);
+        let memories: Vec<&str> = view
+            .memories
+            .iter()
+            .map(|entry| entry.value.as_str())
+            .collect();
+        assert_eq!(memories, case.memories, "memories: {}", case.name);
         assert_eq!(
             view.error.map(|error| error.code),
             case.error,

@@ -27,6 +27,10 @@ pub enum CalcCommand {
     ToggleSign,
     Memory {
         op: MemoryOp,
+        /// Opaque slot id from `CalcView.memories`; omitted means the newest
+        /// slot for recall/add/subtract, or every slot for clear.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        id: Option<String>,
     },
     SetAngleUnit {
         unit: AngleUnit,
@@ -205,6 +209,9 @@ impl CalcCommand {
             Self::StatsAdd { value } | Self::StatsUpdate { value, .. }
                 if value.chars().count() > 1000 =>
             {
+                Err(ErrorInfo::new(crate::error::ErrorCode::InvalidInput))
+            }
+            Self::Memory { id: Some(id), .. } if id.parse::<u64>().is_err() => {
                 Err(ErrorInfo::new(crate::error::ErrorCode::InvalidInput))
             }
             Self::Recall { expression, value }

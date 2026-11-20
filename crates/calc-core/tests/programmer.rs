@@ -248,14 +248,17 @@ fn memory_operations_use_word_sized_values() {
     expression(&mut engine, "200");
     engine.apply(CalcCommand::Memory {
         op: calc_core::MemoryOp::Store,
+        id: None,
     });
     engine.apply(CalcCommand::ClearAll);
 
     let recalled = engine.apply(CalcCommand::Memory {
         op: calc_core::MemoryOp::Recall,
+        id: None,
     });
     assert_eq!(recalled.value, "-56");
     assert_eq!(view(&recalled).hexadecimal, "C8");
+    assert_eq!(recalled.memories[0].value, "-56");
 }
 
 #[test]

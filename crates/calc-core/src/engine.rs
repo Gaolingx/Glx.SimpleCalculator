@@ -1,6 +1,6 @@
 //! Basic-mode session state machine.
 //!
-//! The engine owns the input buffer, pending expression, memory slot and
+//! The engine owns the input buffer, pending expression, memory list and
 //! repeat-equals state. It returns canonical values only; the frontend owns
 //! grouping, significant digits and localized messages.
 
@@ -8,11 +8,12 @@ use rust_decimal::Decimal;
 
 use crate::command::{BinaryOp, CalcCommand, ConstantId, MemoryOp, UnaryOp};
 use crate::error::{CalcResult, ErrorCode, ErrorInfo};
+use crate::memory::MemoryStore;
 use crate::mode::{AngleUnit, Mode, Radix, WordSize};
 use crate::ops;
 use crate::parser::{self, Token};
 use crate::value::{self, Number};
-use crate::view::CalcView;
+use crate::view::{CalcView, MemoryView};
 
 mod programmer;
 mod statistics;
@@ -72,7 +73,7 @@ pub struct Engine {
     entry: Option<Entry>,
     result: Option<Number>,
     expression: String,
-    memory: Option<Number>,
+    memory: MemoryStore<Number>,
     error: Option<ErrorInfo>,
     last_op: Option<(BinaryOp, Number)>,
     angle_unit: AngleUnit,
@@ -101,7 +102,7 @@ impl Engine {
             entry: None,
             result: None,
             expression: String::new(),
-            memory: None,
+            memory: MemoryStore::default(),
             error: None,
             last_op: None,
             angle_unit: AngleUnit::Deg,
@@ -167,7 +168,7 @@ impl Engine {
                 self.toggle_sign();
                 Ok(())
             }
-            CalcCommand::Memory { op } => self.memory(op),
+            CalcCommand::Memory { op, id } => self.memory(op, id.as_deref()),
             CalcCommand::SetAngleUnit { unit } => {
                 self.angle_unit = unit;
                 Ok(())
@@ -238,7 +239,15 @@ impl Engine {
             mode: self.mode,
             expression,
             value,
-            memory: self.memory.map(Number::canonical),
+            memories: self
+                .memory
+                .entries()
+                .iter()
+                .map(|entry| MemoryView {
+                    id: entry.id.to_string(),
+                    value: entry.value.canonical(),
+                })
+                .collect(),
             programmer: None,
             statistics: None,
             error: self.error.clone(),
@@ -471,28 +480,48 @@ impl Engine {
         }
     }
 
-    fn memory(&mut self, op: MemoryOp) -> CalcResult<()> {
+    fn memory(&mut self, op: MemoryOp, id: Option<&str>) -> CalcResult<()> {
+        let target = match id {
+            Some(raw) => Some(
+                raw.parse::<u64>()
+                    .map_err(|_| ErrorInfo::new(ErrorCode::InvalidInput))?,
+            ),
+            None => None,
+        };
         match op {
-            MemoryOp::Clear => self.memory = None,
+            MemoryOp::Clear => self.memory.remove(target),
             MemoryOp::Store => {
-                self.memory = Some(self.current_value()?);
+                self.memory.store(self.current_value()?);
                 self.replace_entry = true;
             }
             MemoryOp::Add | MemoryOp::Subtract => {
                 let value = self.current_value()?;
-                let base = self.memory.unwrap_or(Number::Decimal(Decimal::ZERO));
                 let binary = if matches!(op, MemoryOp::Add) {
                     BinaryOp::Add
                 } else {
                     BinaryOp::Subtract
                 };
-                self.memory = Some(ops::evaluate_binary(binary, base, value, self.mode)?);
+                if let Some(index) = self.memory.index_of(target) {
+                    let base = *self.memory.value(index);
+                    let updated = ops::evaluate_binary(binary, base, value, self.mode)?;
+                    *self.memory.value_mut(index) = updated;
+                } else if target.is_some() {
+                    return Err(ErrorInfo::new(ErrorCode::InvalidInput));
+                } else {
+                    let zero = Number::Decimal(Decimal::ZERO);
+                    let updated = ops::evaluate_binary(binary, zero, value, self.mode)?;
+                    self.memory.store(updated);
+                }
                 self.replace_entry = true;
             }
             MemoryOp::Recall => {
-                let Some(memory) = self.memory else {
+                let Some(index) = self.memory.index_of(target) else {
+                    if target.is_some() {
+                        return Err(ErrorInfo::new(ErrorCode::InvalidInput));
+                    }
                     return Ok(());
                 };
+                let memory = *self.memory.value(index);
                 self.begin_entry_if_needed();
                 self.entry = Some(Entry::new(memory.canonical()));
                 self.replace_entry = true;

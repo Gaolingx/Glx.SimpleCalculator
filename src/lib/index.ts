@@ -52,6 +52,7 @@ export type {
   HistoryEntry,
   HistoryInput,
   MemoryOp,
+  MemoryView,
   ProgrammerView,
   UiScale,
   UnaryOp,

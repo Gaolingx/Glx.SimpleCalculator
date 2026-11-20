@@ -63,7 +63,7 @@ impl StatisticsSession {
             mode: Mode::Statistics,
             expression: self.expression.clone(),
             value: self.result.clone().unwrap_or_default(),
-            memory: None,
+            memories: Vec::new(),
             programmer: None,
             statistics: Some(StatisticsView {
                 data: self

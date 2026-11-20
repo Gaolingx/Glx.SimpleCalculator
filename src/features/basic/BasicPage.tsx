@@ -43,11 +43,11 @@ export function BasicPage() {
           value={view.value}
           error={transportError ?? view.error?.code ?? null}
           grouping={grouping}
-          memory={view.memory !== null}
+          memory={view.memories.length > 0}
           onCopy={() => copyValue(view.value)}
           flashToken={clearPulse}
         />
-        <MemoryBar hasMemory={view.memory !== null} onCommand={send} />
+        <MemoryBar memories={view.memories} onCommand={send} />
         <Keypad onCommand={send} />
         {previewNotice ? (
           <p className={styles.notice} role="status">

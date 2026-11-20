@@ -254,7 +254,7 @@ fn view_exposes_only_statistics_projection() {
     let view = engine.view();
 
     assert_eq!(view.mode, Mode::Statistics);
-    assert!(view.memory.is_none());
+    assert!(view.memories.is_empty());
     assert!(view.programmer.is_none());
     assert_eq!(data(&view), ["1"]);
 }

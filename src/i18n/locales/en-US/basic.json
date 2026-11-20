@@ -5,6 +5,9 @@
   "expression": "Expression",
   "keypad": "Keypad",
   "memoryIndicator": "Memory contains a value",
+  "memoryOpen": "Open memory list",
+  "memoryPanel": "Memory list",
+  "memoryClearAll": "Clear all memory",
   "previewNotice": "The browser preview does not calculate; run the desktop app.",
   "keys": {
     "percent": "Percent",
@@ -23,7 +26,7 @@
     "decimal": "Decimal point"
   },
   "memoryKeys": {
-    "clear": "Clear memory",
+    "clear": "Clear all memory",
     "recall": "Recall memory",
     "add": "Add to memory",
     "subtract": "Subtract from memory",

@@ -203,7 +203,9 @@ describe("BasicPage", () => {
     renderPage();
     expect(screen.getByRole("button", { name: initial }).hasAttribute("disabled")).toBe(true);
 
-    backend.calcCommand.mockResolvedValue(view({ value: "7", memory: "7" }));
+    backend.calcCommand.mockResolvedValue(
+      view({ value: "7", memories: [{ id: "1", value: "7" }] }),
+    );
     press("7");
 
     await waitFor(() =>

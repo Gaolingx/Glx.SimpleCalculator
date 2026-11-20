@@ -17,7 +17,8 @@ pub struct CalcView {
     pub expression: String,
     /// Canonical raw value; empty when the session has no value yet.
     pub value: String,
-    pub memory: Option<String>,
+    /// Newest-first memory slots; empty when the session has no memory.
+    pub memories: Vec<MemoryView>,
     /// Present only in programmer mode.
     pub programmer: Option<ProgrammerView>,
     /// Present only in statistics mode.
@@ -31,12 +32,20 @@ impl CalcView {
             mode,
             expression: String::new(),
             value: String::new(),
-            memory: None,
+            memories: Vec::new(),
             programmer: None,
             statistics: None,
             error: None,
         }
     }
+}
+
+/// One memory slot. `id` is opaque and stable only for the session lifetime.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryView {
+    pub id: String,
+    pub value: String,
 }
 
 /// Programmer-mode projections of the current value.
