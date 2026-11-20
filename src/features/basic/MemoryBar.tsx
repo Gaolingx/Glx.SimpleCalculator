@@ -23,16 +23,22 @@ const KEYS: readonly MemoryKey[] = [
 interface MemoryBarProps {
   memories: readonly MemoryView[];
   onCommand: (command: CalcCommand) => void;
+  /** Display-only formatting for slot values; defaults to the raw string. */
+  formatValue?: (value: string) => string;
 }
 
-export function MemoryBar({ memories, onCommand }: MemoryBarProps) {
+export function MemoryBar({
+  memories,
+  onCommand,
+  formatValue = (value) => value,
+}: MemoryBarProps) {
   const { t } = useTranslation();
   const [panel, setPanel] = useState<{ x: number; y: number } | null>(null);
   const hasMemory = memories.length > 0;
 
   const items: SoftMenuItem[] = memories.map((memory) => ({
     id: memory.id,
-    label: memory.value,
+    label: formatValue(memory.value),
     onSelect: () => onCommand({ type: "memory", op: "recall", id: memory.id }),
   }));
   items.push({

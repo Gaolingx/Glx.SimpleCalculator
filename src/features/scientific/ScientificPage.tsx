@@ -7,7 +7,7 @@ import {
   useToast,
   type SegmentedOption,
 } from "../../components/ui";
-import { isTauriRuntime, type CalcMode } from "../../lib/ipc";
+import { formatNumber, isTauriRuntime, type CalcMode } from "../../lib";
 import type { AngleUnit } from "../../lib/settings";
 import { useSettingsStore } from "../../stores/settings";
 import { CalculatorMenu } from "../shared/CalculatorMenu";
@@ -80,7 +80,16 @@ export function ScientificPage() {
           onCopy={() => copyValue(view.value)}
           flashToken={clearPulse}
         />
-        <MemoryBar memories={view.memories} onCommand={send} />
+        <MemoryBar
+          memories={view.memories}
+          onCommand={send}
+          formatValue={(value) =>
+            formatNumber(value, {
+              grouping,
+              notation: scientificNotation ? "scientific" : "auto",
+            })
+          }
+        />
         <div className={styles.toolbar}>
           <SoftSegmentedControl
             value={angleUnit}

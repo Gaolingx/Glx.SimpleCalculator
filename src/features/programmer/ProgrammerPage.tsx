@@ -132,7 +132,11 @@ export function ProgrammerPage() {
           onCopy={() => copyValue(view.value)}
           flashToken={clearPulse}
         />
-        <MemoryBar memories={view.memories} onCommand={send} />
+        <MemoryBar
+          memories={view.memories}
+          onCommand={send}
+          formatValue={(value) => formatProgrammerValue(value, radix, grouping)}
+        />
         <SoftSegmentedControl
           value={wordSize}
           options={wordSizeOptions}

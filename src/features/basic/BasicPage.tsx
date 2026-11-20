@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 
+import { formatNumber } from "../../lib";
 import { useSettingsStore } from "../../stores/settings";
 import { CalculatorMenu } from "../shared/CalculatorMenu";
 import { useCalculatorSession } from "../shared/useCalculatorSession";
@@ -47,7 +48,11 @@ export function BasicPage() {
           onCopy={() => copyValue(view.value)}
           flashToken={clearPulse}
         />
-        <MemoryBar memories={view.memories} onCommand={send} />
+        <MemoryBar
+          memories={view.memories}
+          onCommand={send}
+          formatValue={(value) => formatNumber(value, { grouping })}
+        />
         <Keypad onCommand={send} />
         {previewNotice ? (
           <p className={styles.notice} role="status">
