@@ -2,14 +2,14 @@
 
 | 项 | 内容 |
 |---|---|
-| 文档版本 | v0.3（T19 完成，v0.1.0 发布收尾完成） |
-| 编写日期 | 2026-11-19 |
+| 文档版本 | v0.4（T20 完成：发布后 UI 打磨、多槽记忆、文档对齐） |
+| 编写日期 | 2026-11-19（T20 更新 2026-11-20） |
 | 仓库 | `E:\GitHub\Glx.SimpleCalculator` |
 | 说明 | 需求中提到的 `E:\GitHub\fork\Glx.SimpleCalculator` 不存在，按实际仓库路径落盘 |
 | 关联设计 | [design.md](../../UIDesign/soft-ui/design.md)（柔和界面风 soft-ui） |
 | 布局参考 | 截图：Windows 计算器式布局（自定义标题栏 + 左侧模式导航栏 + 右对齐显示区 + 按键网格 / 单位转换表单） |
 | 当前代码状态 | Tauri 2 + React 19 应用完成，7 个页面、Rust 内核与 NSIS/MSI 打包；逐任务记录见 §1.3 |
-| 当前进度 | **T19 完成**（2026-11-19）：v0.1.0 发布说明、产物归档与工作区清理完成；T0–T19 全部 done |
+| 当前进度 | **T20 完成**（2026-11-20）：发布后 UI 打磨、多槽记忆面板、计划与文档对齐；T0–T20 全部 done |
 
 > 本文档只做调研与规划，尚未修改任何应用代码。
 
@@ -25,7 +25,7 @@
    - 无边框窗口 + 自定义标题栏在 Windows 上的拖拽、双击最大化、缩放、阴影、Snap 行为；
    - 本机为 **Windows Server 2022（10.0.20348）**，**Mica 不可用**，Acrylic 需实测，必须准备纯色降级。
 6. **汇率数据源已实测可用**：欧洲央行 ECB 每日 XML，HTTP 200，29 种货币（含 CNY），基准 EUR，数据日期 2026-11-18，无需 API Key。
-7. 按 **T0–T19 任务表**（第 6 节）推进，任务映射到 M0–M9 里程碑，每阶段以「构建 + 测试 + 文档更新 + 可评审提交」收尾。
+7. 按 **T0–T20 任务表**（第 6 节）推进，任务映射到 M0–M9 里程碑，每阶段以「构建 + 测试 + 文档更新 + 可评审提交」收尾。
 8. 文档内的模块边界、职责、验证方式、T 任务依赖与产物清理规则已统一口径（见 3.10、3.11、6.0、7.0、12、13 节）。
 
 ---
@@ -326,6 +326,17 @@ setx PATH "%PATH%;E:\node"
   - 依赖外部环境：MSI per-machine 安装、中文输入法、双屏混合 DPI 仍需在对应环境复验。
   - 发布流程：本次跑通「重建 → 归档 → 校验和 → 发布说明」，后续版本可直接复用 §12.6。
 
+**T20 实测记录（2026-11-20）**
+
+- 范围：v0.1.0 发布后的 5 个 UI 提交（`6febb1c`、`1c43989`、`ddd4f4b`、`01c279f`、`2a266f4`）补记为 T20，并补齐 T5/M2 遗留的多槽记忆面板；本任务不改变 v0.1.0 归档产物。
+- UI 缩放：设置新增 50–250%（步进 25）滑杆与数值输入，持久化 `uiZoom`；根字号为 `16px × --ui-scale × --ui-zoom`，≥120% 的键盘重排同时考虑两者；预览拖动即时生效，失焦/回车提交，非法值本地提示。浏览器预览与真实设置读写均可用。
+- 动效：模式切换使用 View Transitions，清除时闪烁显示值（Web Animations，reduced-motion 仍可运行）；`SoftMenu`/`SoftCombobox`/`DatePicker`/`SoftToast`/`SoftDialog` 统一 `usePresence` 退出动画与 motion 令牌；导航 tooltip 点击后残留已修复；基本/科学/程序员/统计页统一内边距、间距与 52rem 断点。
+- 多槽记忆：内核新增 `memory::MemoryStore<T>`（新建在前、`id` 定位、`None` 表示最新槽或清空全部）。契约由 `CalcView.memory: Option<String>` 改为 `memories: [{id, value}]`，`CalcCommand::Memory { op, id? }`；MC 清空全部、MR/M+/M− 默认作用于最新槽，指定 `id` 可命中旧槽；M▾ 面板列出全部记忆，点击恢复、底部清空全部。记忆仍为会话内、按模式隔离；程序员模式切换字宽时归一化全部槽位。
+- 小数位决策：§3.7/M2 中的「小数位设置」在功能矩阵与 README 均无定义，评估后移出本迭代范围；删除计划项，不引入与有效数字/E 记法冲突的新显示语义。
+- 测试：Rust **250 项**（+3：多槽新建在前/按 id 命中、旧槽 M+、未知 id 拒绝）；前端 **206 项/26 文件**（+4：`MemoryBar` 面板与工具栏命令）。`cargo fmt --check`、`clippy -D warnings`、`cargo test --workspace`；`npm run typecheck` / `lint` / `test` / `check:i18n` / `build` 全绿。产物 JS 420.99 kB（gzip 130.36 kB）、CSS 61.46 kB（gzip 9.41 kB）、字体 48.25 kB，仍在 250 kB gzip 预算内。
+- QA：浏览器预览抽样验证缩放 100%/150%/250% 与浅/深主题、中/英语言组合；记忆面板因浏览器预览不执行计算，改由 jsdom 组件测试覆盖（打开、最新在前、按 id 恢复、清空全部、空列表禁用）。v0.1.0 安装包与 `release/v0.1.0/` 未重建，仍对应 T19 构建；下次发布需升版本并重新打包。
+- 文档：§2.1 记忆验收改为多槽口径，§3.6 补 T20 契约，§10 回填 8 项决策，§11 DoD 勾选，README 基线与 QA 索引同步；新增 `docs/qa/2026-11-20/README.md`。
+
 ### 1.4 参考截图 → 布局结论
 
 - 自定义标题栏：左侧应用名 + `dev` 徽标，右侧最小化/最大化/关闭；内容区可拖拽。
@@ -366,7 +377,7 @@ setx PATH "%PATH%;E:\node"
 | 模块 | 功能点 | 优先级 | 验收要点 |
 |---|---|---|---|
 | 基本 | `+ − × ÷ =`、`%`、`±`、`√`、`x²`、`1/x`、`CE`、`C`、`⌫`、连续运算、重复 `=` | P0 | 结果/表达式双行显示；除以零、溢出有明确错误 |
-| 基本 | 记忆：`MC/MR/M+/M−/MS/M▾`（记忆面板） | P0 | 记忆值保留在面板列表（会话内，不跨重启）；MR 插入当前值 |
+| 基本 | 记忆：`MC/MR/M+/M−/MS/M▾`（多槽记忆面板） | P0 | 多值列表保留在 M▾ 面板（会话内、按模式隔离，不跨重启）；MR 插入选中值，MC 清空全部 |
 | 科学型 | `sin/cos/tan` + 反三角 + 双曲、`ln`、`log`、`exp`、`x^y`、`x³`、`∛`、`n!`、`|x|`、`floor/ceil/round`、`π/e`、`rand`、括号、`F-E`、角度制 DEG/RAD/GRAD | P1 | 运算优先级正确；角度制切换即时生效；定义域错误可恢复 |
 | 程序员 | 进制切换 2/8/10/16；位运算 `AND OR XOR NOT LSH RSH ROL ROR MOD`；字节宽度 `QWORD/DWORD/WORD/BYTE`；位网格（点击翻转位） | **P0（重点）** | 宽度截断、移位环绕、负数补码显示正确；非法数字输入被拦截 |
 | 统计型 | 数据集录入/编辑；`Σx`、`Σx²`、`x̄`、`s`（样本）、`σ`（总体）、`n`、中位数、众数、极差、最小/最大、方差 | P1 | 空集/单元素有明确提示；浮点误差处理一致 |
@@ -471,7 +482,7 @@ Glx.SimpleCalculator/
 | 状态 | 归属 | 说明 |
 |---|---|---|
 | 当前模式 / 抽屉开关 / 弹层 | 前端 Zustand | 纯 UI |
-| 标准/科学/程序员/统计会话 | **Rust** `SessionMap<WindowLabel, {active: Mode, engines: Mode→Session}>` | 每窗口、每模式独立；含表达式 token、pending op、memory、radix、word size、angle unit；`session_select` 切换活跃模式 |
+| 标准/科学/程序员/统计会话 | **Rust** `SessionMap<WindowLabel, {active: Mode, engines: Mode→Session}>` | 每窗口、每模式独立；含表达式 token、pending op、memory list（多槽）、radix、word size、angle unit；`session_select` 切换活跃模式 |
 | 单位/日期/工作表输入 | 前端表单状态 | 提交时走纯函数命令 |
 | 设置 | Rust store + 前端镜像 | 单一写入方为 Rust 命令，避免双写 |
 | 历史 | Rust store（默认 500，设置范围 100–1000） | 引擎完成 `=`/函数时返回 entry，由前端调用 `history_add` 落盘 |
@@ -501,7 +512,7 @@ pub struct CalcView {
     pub mode: Mode,
     pub expression: String,      // 供展示的表达式行（ASCII 运算符）
     pub value: String,           // 规范化原始值，未分组
-    pub memory: Option<String>,
+    pub memories: Vec<MemoryView>, // { id, value }，新建在前
     pub programmer: Option<ProgrammerView>, // radix/wordSize/四种进制/bits
     pub error: Option<ErrorInfo>,
 }
@@ -549,6 +560,7 @@ pub enum CalcCommand {
 > T14 新增纯函数 `date_diff(from,to)` → `DateDifference {years,months,days,totalDays,totalWeeks}` 与 `date_add(date,years,months,weeks,days)` → `DateShift {date}`。日期限 `0001-01-01`–`9999-12-31`；先按月（月末夹取）再加天/周；越界为 `OVERFLOW`，非法日期/数量为 `INVALID_INPUT`。
 > T15 新增 `worksheet_catalog()` → `WorksheetCatalog {worksheets[{id,fields[{id,kind,min,max,defaultValue}],results[{id,kind}]}]}` 与 `worksheet_compute(sheet, inputs)` → `WorksheetResult {values[{id,value}]}`。`kind` 为 `decimal|integer`（字段）与 `money|decimal`（结果）；字段错误 `INVALID_INPUT` 的 `args[0]` 为字段 id，跨字段规则为 `residualBelowPrice`。金额结果已按 2 位小数四舍五入，`value` 仍为未分组规范值。
 > T16 新增 `ui_scale_get()` → `UiScale {textScale}`；`textScale` 为 Windows「辅助功能 → 文本大小」百分比的 1/100（1.0 = 100%），非 Windows 或缺省为 1.0。前端负责钳制到 100–150% 并写入 `--ui-scale`，Rust 侧只做注册表读取与 100–225 范围收敛。
+> T20 将 `CalcView.memory: Option<String>` 改为 `CalcView.memories: MemoryView[]`（`{id, value}`，新建在前）；`CalcCommand::Memory { op, id? }` 的 `id` 缺省时 `recall/add/subtract` 作用于最新槽、`clear` 清空全部，显式 `id` 命中指定槽（未知 id 返回 `INVALID_INPUT`）。前端 `ipc.ts` 同步 `MemoryView` 与归一化。
 
 契约测试位于 `crates/calc-core/tests/contract.rs`（T0 已通过：命令 tag/camelCase、错误码、视图 null 字段、往返、校验）。
 
@@ -558,7 +570,7 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 
 | 文件（AppData） | 内容 | 策略 |
 |---|---|---|
-| `settings.json` | 主题、语言、分组开关、角度制、字宽/进制默认值、小数位、历史开关 | store 插件；启动时读取，变更即时写入 |
+| `settings.json` | 主题、语言、分组开关、角度制、字宽/进制默认值、UI 缩放、历史开关与上限 | store 插件；启动时读取，变更即时写入 |
 | `history.json` | `{id, mode, expression, value, ts}` | 默认上限 500（设置范围 100–1000），按时间倒序；连续重复（与最新一条完全相同）折叠、不跨模式去重；列表与清空按当前模式；add/delete/clear 全部走 Rust；`meta` 暂未使用 |
 | `currency-cache.json` | `{base:"EUR", date, fetchedAt, rates}` | 与设置共用 store 抽象；TTL 24h；失败保留旧缓存 |
 | 窗口位置 | window-state 插件自动管理 | 不手写 |
@@ -597,7 +609,7 @@ TS 侧 `src/lib/ipc.ts` 用**手写窄类型**镜像 serde 结构，禁止 `any`
 | 产物 | 唯一负责方 | 允许依赖 | 禁止事项 |
 |---|---|---|---|
 | 算术/进制/位运算/统计/单位/日期/工作表公式 | `calc-core` | 标准库、`rust_decimal`、`chrono` | 网络、文件、Tauri、i18n 文案 |
-| 会话状态（输入缓冲、pending op、memory、radix、字宽） | `src-tauri`（调用 core） | `calc-core` | 实现算术、直接操作 DOM |
+| 会话状态（输入缓冲、pending op、memory list、radix、字宽） | `src-tauri`（调用 core） | `calc-core` | 实现算术、直接操作 DOM |
 | IPC 命令与参数校验 | `src-tauri/commands` | `calc-core`、插件 | 业务公式 |
 | 设置/历史/汇率缓存落盘 | `src-tauri/storage` | store 插件、serde | 计算逻辑 |
 | 汇率拉取与解析 | `src-tauri/currency` | `reqwest`、`quick-xml` | 单位换算 |
@@ -824,7 +836,7 @@ src/i18n/locales/en-US/...（同构）
 
 > 工作量为人日估算，用于排序而非承诺。每个里程碑结束必须：`fmt + clippy + test + typecheck` 通过 → 更新本文件勾选状态 → 提交。
 
-### 6.0 任务清单（T0–T19，唯一执行口径）
+### 6.0 任务清单（T0–T20，唯一执行口径）
 
 依赖均指“前置任务完成”。状态：`pending` / `doing` / `done`；完成时更新本表。
 
@@ -850,6 +862,7 @@ src/i18n/locales/en-US/...（同构）
 | T17 | 打包 | M9 | T16 | 图标、NSIS/MSI、WebView2 策略、体积优化 | 安装/卸载/启动 | done |
 | T18 | QA 与文档 | M9 | T16,T17 | QA 矩阵记录、截图归档、README、已知问题 | 检查表全勾；截图可追溯 | done |
 | T19 | 发布与收尾 | M9 | T18 | 版本号、发布说明、产物归档、清理、复盘 | 产物清单核对；工作区干净 | done |
+| T20 | 发布后打磨与多槽记忆 | M9 | T19 | UI 缩放/动效、布局统一、tooltip 修复、`memories[]` 契约与 M▾ 面板、文档对齐 | `MemoryBar` 组件测试；全量门禁；浏览器缩放抽样 | done |
 
 **冲突与遗漏检查（T 表自审）**
 
@@ -895,7 +908,7 @@ npm run typecheck && npm run test
 - [x] 错误类型（DivideByZero/Overflow/InvalidInput/DomainError/Syntax）及恢复路径
 - [x] 原始值输出契约（`value::canonical`，不含分组；未单列 `format.rs`，见 1.3 T4 记录）
 - [x] 单测：≥60 例（实际 82 项），覆盖优先级、连算、百分比语义、边界
-- [ ] `proptest`：`parse(format(x)) == x` 往返（可选，未引入依赖）
+- [x] `proptest` 可选：评估后不引入；解析/输出往返由 golden 用例与值格式单测覆盖（未新增依赖）
 
 **验收**
 - `cargo test -p calc-core` 全绿；错误用例返回稳定 code
@@ -906,10 +919,10 @@ npm run typecheck && npm run test
 **任务**
 - [x] `Display`（表达式行 + 主值 + 自动缩字号 + 分组渲染 + 防抖 `aria-live` + 复制按钮）
 - [x] `Keypad`（4 列网格，对齐截图；hover/active 动效）
-- [x] 记忆行（MC/MR/M+/M−/MS，单槽）；记忆面板需多槽记忆，未纳入本次迭代
+- [x] 记忆行（MC/MR/M+/M−/MS/M▾）与多槽面板（T20：新建在前、按 id 恢复、MC 清空全部，会话内按模式隔离）
 - [x] 历史抽屉（按日期分组、按当前模式展示、点击恢复、删除、清空确认、复制、空状态）
 - [x] 剪贴板：复制原始值、粘贴清洗、无效提示
-- [ ] 设置面板：主题/语言/分组开关/小数位/历史开关（`SoftSwitch`、`SoftSegmentedControl`）
+- [x] 设置面板：主题/语言/分组开关/历史开关与上限/角度制/字宽/进制/UI 缩放（T20 移除未定义语义的「小数位」项）
 - [x] 基本模式快捷键（含 Ctrl+C/V）+ 覆盖层/输入框焦点门控（F1 说明随 T16）
 - [x] Vitest：格式化、键盘映射、BasicPage 组件、粘贴清洗、SoftMenu
 
@@ -1016,6 +1029,7 @@ npm run typecheck && npm run test
 - [x] README、截图、已知问题（`README.md`、`docs/qa/2026-11-19/T18-QA-MATRIX.md`）
 - [x] QA 检查表逐项打勾（T18 合并回归 20/20）
 - [x] 发布说明（`docs/release/v0.1.0.md`，T19）
+- [x] T20：发布后 UI 打磨（缩放滑杆、模式/清除/覆盖层动效、布局统一、tooltip 修复）与多槽记忆面板；回填 §10 决策、勾选 DoD、删除无定义语义的小数位项
 
 **验收**
 - `npm run tauri build` 产物可安装、可卸载、启动正常
@@ -1046,6 +1060,8 @@ npm run typecheck && npm run test
 | T16 | 手工 QA 记录 + 性能采样 | `docs/qa/`（提交） | 矩阵全勾 |
 | T17 | 安装/卸载冒烟 | `docs/qa/`（提交） | 产物可启动 |
 | T18 | i18n 键一致 + 回归清单 | `scripts/check-i18n.mjs`、`docs/qa/` | CI 绿 |
+| T19 | 版本/产物/校验和 | `docs/release/v0.1.0.md`、`release/v0.1.0/SHA256SUMS.txt` | 清单核对通过 |
+| T20 | 多槽记忆内核/契约 + M▾ 面板 + UI 缩放 | `crates/calc-core/src/engine/tests.rs`、`tests/contract.rs`、`src/features/basic/MemoryBar.test.tsx`、`docs/qa/2026-11-20/` | 契约往返；面板按 id 恢复/清空；缩放抽样 |
 
 **测试变更规则**
 
@@ -1117,16 +1133,20 @@ npm run check:i18n
 
 ---
 
-## 10. 待确认项（需要拍板，括号内为建议默认）
+## 10. 决策记录（T20 回填，均已落地）
 
-1. **前端栈**：React 19 + CSS Modules（推荐）/ Vue / Svelte？
-2. **语言范围**：zh-CN + en-US（推荐）是否足够？是否需要 zh-TW / ja？
-3. **汇率源**：接受 ECB（每日、29 币种、无 RUB、基准 EUR，推荐）还是需要实时/商业 API？
-4. **首批工作表**：抵押 + 油耗 + 租赁（推荐）之外是否必须包含其他？
-5. **窗口外观**：无边框自定义标题栏（推荐，需 Spike）/ 保留原生标题栏？
-6. **品牌信息**：产品名、标识符、图标素材？（默认 `Glx Calculator` / `com.glx.calculator` / 临时图标）
-7. **统计录入方式**：列表式录入后计算（推荐）/ 逐步累加？
-8. **发布渠道**：仅本地构建 / GitHub Release；是否需要代码签名与自动更新？
+| # | 事项 | 决策 | 落地位置 |
+|---|---|---|---|
+| 1 | 前端栈 | React 19 + TypeScript + CSS Modules（Vite 8） | T1–T3 |
+| 2 | 语言范围 | zh-CN（默认）+ en-US；架构支持后续追加 | T2、`scripts/check-i18n.mjs` |
+| 3 | 汇率源 | ECB 每日参考价（29 币种、基准 EUR、无 RUB），24h 缓存 | T13 |
+| 4 | 首批工作表 | 抵押 + 油耗 + 租赁，注册表可扩展 | T15 |
+| 5 | 窗口外观 | 无边框自定义标题栏（Spike A 通过，纯色降级） | T3 |
+| 6 | 品牌信息 | `Glx Calculator` / `com.glx.calculator` / 渐变等号 SVG 图标 | T1、T17 |
+| 7 | 统计录入方式 | 列表式录入后计算（增删改/排序/清空） | T11 |
+| 8 | 发布渠道 | 仅本地构建与归档；暂无签名与自动更新 | T17–T19 |
+
+> 未决项：代码签名、自动更新、双屏混合 DPI、中文 IME，见 §9 风险表、README 与 `docs/release/v0.1.0.md` 已知问题。
 
 ---
 
@@ -1134,18 +1154,18 @@ npm run check:i18n
 
 一个功能被视为完成，需同时满足：
 
-- [ ] Rust 内核逻辑有单测，边界与错误路径覆盖
-- [ ] UI 在 light/dark、zh-CN/en-US、100%/150% DPI 下检查通过
-- [ ] 键盘可完成主流程，焦点可见，错误有文本
-- [ ] 文案全部走 i18n（两份语言文件键一致）
-- [ ] 复制/粘贴、历史、分组开关行为一致
-- [ ] 无 `any`、无未处理 Promise、无控制台错误
-- [ ] `fmt / clippy / test / typecheck / check:i18n` 全绿
-- [ ] 变更未越过 3.10 的模块边界（无跨层逻辑、无文案/格式化错位）
-- [ ] 测试按 7.0 随任务新增/更新，未删除失败测试或放宽断言
-- [ ] IPC 契约变更已同步 `view.rs` / `ipc.ts` / 本文档，并有契约测试
-- [ ] 临时产物已按 12.3 清理，提交中无构建缓存/日志/截图/依赖目录
-- [ ] 本文档对应 T/M 状态已更新，并有可评审提交（`feat|fix|chore|docs(scope): ...`）
+- [x] Rust 内核逻辑有单测，边界与错误路径覆盖（T20：250 项，含多槽记忆与未知 id）
+- [x] UI 在 light/dark、zh-CN/en-US、100%/150% DPI 下检查通过（T18 矩阵 + T20 浏览器缩放抽样）
+- [x] 键盘可完成主流程，焦点可见，错误有文本（T16/T18；M▾ 面板沿用 SoftMenu 焦点与 Esc）
+- [x] 文案全部走 i18n（两份语言文件键一致；`check:i18n` 13 文件 × 2 语言）
+- [x] 复制/粘贴、历史、分组开关行为一致（T18 合并回归 20/20）
+- [x] 无 `any`、无未处理 Promise、无控制台错误（`typecheck`/`lint`；T18 与 T20 抽样 0 error）
+- [x] `fmt / clippy / test / typecheck / check:i18n` 全绿（T20：Rust 250、前端 206、build 通过）
+- [x] 变更未越过 3.10 的模块边界（记忆列表位于 `calc-core`，Tauri/前端只做适配与渲染）
+- [x] 测试按 7.0 随任务新增/更新，未删除失败测试或放宽断言（T20 新增 Rust 3 项、前端 4 项）
+- [x] IPC 契约变更已同步 `view.rs` / `ipc.ts` / 本文档，并有契约测试（`memories[]` + `Memory { id? }`）
+- [x] 临时产物已按 12.3 清理，提交中无构建缓存/日志/截图/依赖目录
+- [x] 本文档对应 T/M 状态已更新，并有可评审提交（`feat|fix|chore|docs(scope): ...`）
 
 ---
 
@@ -1256,7 +1276,10 @@ rm -rf src-tauri/target/release/bundle
 | 28 | 4.5 / 4.6 / T16 | Windows 文本大小上限、紧凑布局重排、标题栏取舍与 F1 说明未定义 | T16 明确：读取 `TextScaleFactor`（100–225）并钳制到 100–150%；根字号驱动全部 rem 尺寸；≥120% 时科学/程序员键盘 6→4、统计函数 4→3，标题栏隐藏重复历史按钮与 dev 徽标，分段控件收紧内边距；日期/右键弹层不超过视口；F1 快捷键说明与「跳到主要内容」纳入无障碍，`forced-colors` 使用系统色焦点轮廓 |
 | 29 | 8 / T17 | MSI 安装范围、WebView2 离线路径与未签名提示未写明 | T17 明确：NSIS 为 `currentUser`（实测免提权安装/卸载）；MSI 由 WiX 模板固定为 `perMachine`，非管理员会话被系统策略拒绝（1625），需管理员安装，已用 `/a` 管理安装验证载荷；WebView2 采用 silent `downloadBootstrapper`，Server 2022/离线需联网或预装 Runtime；无证书，SmartScreen 提示保留到签名接入 |
 
-**仍待确认（不阻塞 T0/T1）**：第 10 节的 8 项产品/发布决策；其中「前端栈、语言范围、ECB、首批工作表、无边框窗口」影响 T2/T3/T13/T15/T17，建议在 M0 结束前拍板。
+| 30 | 2.1 / 3.4 / T5 / T20 | 记忆仅有单槽，`M▾` 与多值面板未实现，但 §2.1 按 P0 要求面板 | T20 新增 `memory::MemoryStore` 与 `memories[]` 契约；M▾ 面板按 id 恢复、底部清空全部；MC 清空全部，MR/M+/M− 默认最新槽；记忆会话内、按模式隔离 |
+| 31 | 3.7 / M2 / T20 | `settings.json` 与 M2 勾选项包含「小数位」，但功能矩阵与 README 均无定义，代码也未实现 | T20 评估后移出范围：删除计划项，保留现有有效数字/E 记法显示策略，避免两套精度语义冲突 |
+
+**决策状态**：第 10 节的 8 项产品/发布决策已在 T20 回填并落地；仍待外部环境验证的代码签名、自动更新、双屏混合 DPI 与中文 IME 见 §9、README 与发布说明。
 
 ---
 
@@ -1280,7 +1303,7 @@ npm: react 19.3.1, vite 8.3.8, typescript 7.0.2, zustand 5.1.0,
      i18next 27.2.1, vitest 5.1.1
 ```
 
-## 附录 B：M0 Spike 记录（待填写）
+## 附录 B：M0 Spike 记录
 
 | Spike | 问题 | 结论 | 日期 |
 |---|---|---|---|
