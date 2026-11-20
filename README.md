@@ -60,7 +60,7 @@ npm run test          # Vitest
 npm run build
 ```
 
-当前基线（T20，2026-11-20）：Rust 250 项、前端 206 项（26 文件），lint 0 warning；产物 JS 420.99 kB（gzip 130.36 kB）、CSS 61.46 kB（gzip 9.41 kB）。
+当前基线（T20，2026-11-20）：Rust 250 项、前端 206 项（26 文件），lint 0 warning；产物 JS 421.14 kB（gzip 130.42 kB）、CSS 61.53 kB（gzip 9.44 kB）。
 
 ## 打包
 
